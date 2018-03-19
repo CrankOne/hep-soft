@@ -1,0 +1,33 @@
+inherit: [gentoo-build]
+
+# mount:
+#   $ squashfuse /tmp/gentoo-20180318.xz.sqfs $(pwd)/mountpoint
+# umount:
+#   $ fusermount -u $(pwd)/mountpoint
+
+checkoutVars:
+    - GENTOO_BASE_IMAGE
+
+checkoutScript: |
+    docker pull ${GENTOO_BASE_IMAGE}
+
+buildVars: 
+    - DOCKER_COMMAND
+    - GENTOO_BASE_IMAGE
+
+buildScript: |
+    PORTAGES_SNAPSHOT=(${BOB_DEP_PATHS[gentoo-portages]}/gentoo-*)
+    PORTAGES_SNAPSHOT_FILE=$(basename "$PORTAGES_SNAPSHOT")
+    if [[ "$PORTAGES_SNAPSHOT_FILE" == *.sqfs ]] ; then
+        #$DOCKER_COMMAND info > /tmp/one
+        mount_sqfs_portages
+        trap umount_sqfs_portages EXIT
+        
+    else
+        (>&2 echo "Error: unable to mount portages in \"$PORTAGES_SNAPSHOT_FILE\".")
+        exit 1
+    fi
+
+provideVars:
+    GENTOO_BASE_IMAGE: "${GENTOO_BASE_IMAGE}"
+

@@ -1,0 +1,11 @@
+root: True
+
+depends:
+    -
+        name: docker-wrapper
+        use: [environment, tools]
+        forward: True
+    - gentoo-hep-image
+
+buildScript:
+    echo "Bob needs build script to not be empty." > /dev/null

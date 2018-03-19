@@ -1,0 +1,18 @@
+inherit: [in-docker]
+
+depends:
+    - gentoo-portages
+
+environment:
+    GENTOO_BASE_IMAGE: "gentoo/stage3-amd64"
+
+buildTools: [docker]
+buildScript: |
+    # Note: these few are only used whn portages are on the squashfs:
+    mount_sqfs_portages() {
+        mkdir -p portages.mount
+        squashfuse "$PORTAGES_SNAPSHOT" portages.mount
+    }
+    umount_sqfs_portages() {
+        fusermount -u portages.mount
+    }

@@ -1,0 +1,4 @@
+=dev-util/debugedit-5.3.5-r1::gentoo
+=sys-devel/gdb-7.12.1::gentoo
+=app-portage/gentoolkit-0.4.0::gentoo
+=sci-physics/cernlib-2006-r5

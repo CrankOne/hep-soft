@@ -1,0 +1,12 @@
+buildScript: |
+    selinux_check() {
+        ENFORCEVAL=$(getenforce)
+        if [ $? -ne 0 ] ; then
+            # ok, we're not in SELinux
+            return;
+        fi
+        if [ "$ENFORCEVAL" == "Enforcing" ] ; then
+            (>&2 echo "SELinux policy is set to \"$ENFORCEVAL\". Troubles are"
+                " possible in case of some strong userspace operations.")
+        fi
+    }

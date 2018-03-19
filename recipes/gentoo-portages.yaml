@@ -1,0 +1,21 @@
+inherit: [fetch]
+
+metaEnvironment:
+    PORTAGES_SNAPSHOT_MIRROR: http://distfiles.gentoo.org
+
+packageVars: [PORTAGES_SNAPSHOT_ID]
+
+packageScript: |
+    # Try to understand, whether we have a squashfuse installed on host:
+    which fusermount
+    HAS_NO_SQUASHFUSE=$?
+    if [ $HAS_NO_SQUASHFUSE -eq 0 ] ; then
+        # download compressed squashfs, its hashsum
+        fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/sha512sum.txt
+        fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/gentoo-"$PORTAGES_SNAPSHOT_ID".xz.sqfs
+        grep gentoo-20180318.xz.sqfs ./sha512sum.txt | sha512sum -c
+    else  # TODO: suport other variants
+        (>&2 echo "Error: no userspace squashfs available on system.")
+        exit 1
+    fi
+
