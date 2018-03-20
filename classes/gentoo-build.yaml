@@ -1,5 +1,13 @@
 inherit: [in-docker]
 
+# Note: this script defines two functions that come on stage when portages
+# snapshot is located on compressed squashfs system. Internally, invokes FUSE
+# mouting procedures for squashfs:
+# mount:
+#   $ squashfuse /tmp/gentoo-20180318.xz.sqfs $(pwd)/mountpoint
+# umount:
+#   $ fusermount -u $(pwd)/mountpoint
+
 depends:
     - gentoo-portages
 
@@ -8,7 +16,7 @@ environment:
 
 buildTools: [docker]
 buildScript: |
-    # Note: these few are only used whn portages are on the squashfs:
+    # Note: these few are only used when portages are on the squashfs:
     mount_sqfs_portages() {
         mkdir -p portages.mount
         squashfuse "$PORTAGES_SNAPSHOT" portages.mount

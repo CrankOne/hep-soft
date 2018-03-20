@@ -1,2 +1,12 @@
 environment:
+    # https://ftp-osl.osuosl.org/pub/gentoo/releases/amd64/autobuilds/20180311T214502Z/stage3-amd64-20180311T214502Z.tar.xz
+    #
+    # This variables defines initial stage3 image from which the Gentoo docker
+    # image will be built in reproducable manner:
+    GENTOO_STAGE3_ARCH: amd64
+    GENTOO_STAGE3_MICROARCH: amd64
+    GENTOO_STAGE3_SUFFIX: ""
+    GENTOO_STAGE3_MIRROR: "https://ftp-osl.osuosl.org/pub/gentoo/releases/amd64/autobuilds"
+    GENTOO_STAGE3_TAG: "20180311T214502Z"  # TODO: understand it and rename it
+    # Portage snapshot ID to provide reproducable builds:
     PORTAGES_SNAPSHOT_ID: "20180318"

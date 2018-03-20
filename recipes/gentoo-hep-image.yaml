@@ -1,15 +1,36 @@
 inherit: [gentoo-build]
 
-# mount:
-#   $ squashfuse /tmp/gentoo-20180318.xz.sqfs $(pwd)/mountpoint
-# umount:
-#   $ fusermount -u $(pwd)/mountpoint
+# This recipe will build the base layer Gentoo docker images, designed to
+# produce binary packages for debug and production purposes. From Bob point
+# of view we consider this image as a tool for generating the binary packages
+# that are packages in both senses (gentoo portage and Bob build tool).
 
 checkoutVars:
-    - GENTOO_BASE_IMAGE
+    - GENTOO_STAGE3_ARCH
+    - GENTOO_STAGE3_MICROARCH
+    - GENTOO_STAGE3_SUFFIX
+    - GENTOO_STAGE3_MIRROR
+    - GENTOO_STAGE3_TAG
 
 checkoutScript: |
-    docker pull ${GENTOO_BASE_IMAGE}
+    #docker pull ${GENTOO_BASE_IMAGE}
+    # Fetch choosen stage3 archive:
+    STAGE3_URL=${GENTOO_STAGE3_MIRROR}/${GENTOO_STAGE3_TAG}/stage3-${GENTOO_STAGE3_ARCH}-${GENTOO_STAGE3_MICROARCH}${GENTOO_STAGE3_TAG}.tar.xz
+    STAGE3=$(basename "$STAGE3_URL")
+    mkdir -p .
+    cd .
+    curl -sSgLf -o ${STAGE3}.DIGESTS.asc ${STAGE3_URL}.DIGESTS.asc
+    curl -sSgLf -o ${STAGE3}.CONTENTS ${STAGE3_URL}.CONTENTS
+    if [ -e "$STAGE3" ] ; then
+        curl -sSgLF -o "$STAGE3" -z "$STAGE3" "$STAGE3_URL"
+    else
+    (
+        F=$(mktemp)
+        trap 'rm -f $F' EXIT
+        curl -sSgLf -o "$F" "$URL"
+        mv "$F" "$STAGE3"
+    )
+    fi
 
 buildVars: 
     - DOCKER_COMMAND
