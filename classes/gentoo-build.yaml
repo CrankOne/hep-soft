@@ -14,6 +14,10 @@ depends:
 environment:
     GENTOO_BASE_IMAGE: "gentoo/stage3-amd64"
 
+buildVars: 
+    - PORTAGES_SNAPSHOT
+    - PORTAGES_SNAPSHOT_FILE
+
 buildTools: [docker]
 buildScript: |
     # Note: these few are only used when portages are on the squashfs:
@@ -24,3 +28,14 @@ buildScript: |
     umount_sqfs_portages() {
         fusermount -u portages.mount
     }
+    #PORTAGES_SNAPSHOT=(${BOB_DEP_PATHS[gentoo-portages]}/gentoo-*)
+    #PORTAGES_SNAPSHOT_FILE=$(basename "$PORTAGES_SNAPSHOT")
+    #if [[ "$PORTAGES_SNAPSHOT_FILE" == *.sqfs ]] ; then
+    #    mount_sqfs_portages
+    #    trap umount_sqfs_portages EXIT
+    #    ${DOCKER_COMMAND} run --name #... binfarm-gentoo-base:${GENTOO_STAGE3_TAG}
+    #    umount_sqfs_portages
+    #else
+    #    (>&2 echo "Error: unable to mount portages in \"$PORTAGES_SNAPSHOT_FILE\".")
+    #    exit 1
+    #fi

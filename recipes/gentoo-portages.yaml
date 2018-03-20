@@ -18,4 +18,10 @@ packageScript: |
         (>&2 echo "Error: no userspace squashfs available on system.")
         exit 1
     fi
+    PORTAGES_SNAPSHOT=$(realpath gentoo-"$PORTAGES_SNAPSHOT_ID"*)
+    PORTAGES_SNAPSHOT_FILE=$(basename "$PORTAGES_SNAPSHOT")
+
+provideVars:
+    PORTAGES_SNAPSHOT: ${PORTAGES_SNAPSHOT}
+    PORTAGES_SNAPSHOT_FILE: ${PORTAGES_SNAPSHOT_FILE}
 

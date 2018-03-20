@@ -5,7 +5,7 @@ depends:
         name: docker-wrapper
         use: [environment, tools]
         forward: True
-    - gentoo-hep-image
+    - binfarm-gentoo-base
 
 buildScript:
     echo "Bob needs build script to not be empty." > /dev/null

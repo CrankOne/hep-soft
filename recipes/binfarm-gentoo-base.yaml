@@ -1,0 +1,81 @@
+inherit: [in-docker]
+
+# This recipe will build the base layer Gentoo docker images, designed to
+# produce binary packages for debug and production purposes. From Bob point
+# of view we consider this image as a tool for generating the binary packages
+# that are packages in both senses (gentoo portage and Bob build tool).
+#
+# At this recipe we do not add any new packages in the stage3 gentoo images;
+# it provides a bare minimum for generating packages further.
+
+checkoutVars:
+    - DOCKER_COMMAND
+    - GENTOO_STAGE3_ARCH
+    - GENTOO_STAGE3_MICROARCH
+    - GENTOO_STAGE3_SUFFIX
+    - GENTOO_STAGE3_MIRROR
+    - GENTOO_STAGE3_TAG
+
+checkoutScript: |
+    # Produces deterministic stage3 image according to given variables. This
+    # command will build image named hep-bootstrap:${GENTOO_STAGE3_TAG}
+    # by downloading certain stage3 archive, unpacking it in dir from that we
+    # further copy the minimal gentoo release.
+    mkdir -p .
+    cd .
+    # TODO: depending on Docker version, the -ms or no-ms Dockerfile should be
+    # choosen, defining further operations.
+    # ___ code below is for no-ms docker (below v 17.xx)
+    #     TODO: envisage some cleaning-up measures on failure.
+    #     - copy file governing deployment of Gentoo stage3 within bootstrap:
+    cp $<<gentoo/hep-bootstrap-no-ms.Dockerfile>> ./Dockerfile
+    #     - fetch and re-pack the stage3 of certain version:
+    #     note: --build-arg BOOTSTRAP="${GENTOO_BOOTSTRAP}" for multi-stage
+    ${DOCKER_COMMAND} build \
+                      --build-arg ARCH="${GENTOO_STAGE3_ARCH}" \
+                      --build-arg MICROARCH="${GENTOO_STAGE3_MIRROR}" \
+                      --build-arg SUFFIX="${GENTOO_STAGE3_SUFFIX}" \
+                      --build-arg TAG="${GENTOO_STAGE3_TAG}" \
+                      --build-arg DIST="${GENTOO_STAGE3_MIRROR}" \
+                      --tag hep-bootstrap:${GENTOO_STAGE3_TAG} \
+                      .
+    #     - copy re-packed stage3 from bootstrap container
+    ${DOCKER_COMMAND} run -d --memory=4m --name hep-bootstrap-cntr \
+                      hep-bootstrap:${GENTOO_STAGE3_TAG} \
+                      /bin/sh tail -f /dev/null
+    ${DOCKER_COMMAND} cp hep-bootstrap-cntr:/hep-stage3.tar .
+    #     - clean-up stuff, keeping only the archive of re-packed stage-3
+    ${DOCKER_COMMAND} rm hep-bootstrap-cntr
+    ${DOCKER_COMMAND} rmi hep-bootstrap:${GENTOO_STAGE3_TAG}
+    # ^^^ code above is for no-ms docker
+    # ... TODO: else -ms build ...
+
+buildVars: 
+    - DOCKER_COMMAND
+    - GENTOO_STAGE3_TAG
+    - SYS_PROFILE
+
+buildScript: |
+    # Import the re-packed stage-3 as an "binfarm-gentoo-prelim:..." image
+    ${DOCKER_COMMAND} import $1/hep-stage3.tar binfarm-gentoo-prelim:${GENTOO_STAGE3_TAG}
+    # Eval the corresponding Dockerfile to tune the environment w.r.t to
+    # SYS_PROFILE
+    cp $<<gentoo/body-dev.Dockerfile>>  ./body-dev.Dockerfile
+    cp $<<gentoo/body-prod.Dockerfile>> ./body-prod.Dockerfile
+    echo "FROM binfarm-gentoo-prelim:${GENTOO_STAGE3_TAG}" | cat - body-${SYS_PROFILE}.Dockerfile > Dockerfile
+    cp $<<gentoo/make.conf-dev>>  ./make.conf-dev
+    cp $<<gentoo/make.conf-prod>> ./make.conf-prod
+    ${DOCKER_COMMAND} build --tag hep-bootstrap:${GENTOO_STAGE3_TAG} .
+
+packageVars: 
+    - DOCKER_COMMAND
+    - GENTOO_STAGE3_TAG
+
+packageScript: |
+    # Package script only saves compressed copy of the image for foreign usage.
+    ${DOCKER_COMMAND} save hep-bootstrap:${GENTOO_STAGE3_TAG} \
+                    | bzip2 > hep-bootstrap-${GENTOO_STAGE3_TAG}.tar.bz2
+
+provideVars:
+    GENTOO_BASE_IMAGE: "hep-gentoo:${GENTOO_STAGE3_TAG}"
+
