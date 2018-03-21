@@ -83,8 +83,8 @@ buildScript: |
         # TODO: check, if portages dir is given
         # TODO: check, if we aren't at SELinux and change z switch
         ${DOCKER_COMMAND} run -d --memory=${MEMORY_LIMIT} \
-                              -v $(realpath $2):/hepfarm:z \
-                              -v $(realpath $3):/usr/portage:z \
+                              -v $(realpath $2):/hepfarm:Z \
+                              -v $(realpath $3):/usr/portage:ro \
                               --name $1 \
                               ${GENTOO_BASE_IMAGE} /bin/sh -c "tail -f /dev/null"
         if [ $? -eq 0 ] ; then
@@ -117,13 +117,11 @@ buildScript: |
         fi
         echo -e "[class gentoo-build] exec on container \033[1;32m$1\033[0m:"
         #read -r -d "\n" CMDS
-        F=./host-exec
+        F=$(mktemp -p $2)
         tee $F
         #printf '%s\n' "${CMDS[@]}" > $F
-        #echo "${DOCKER_COMMAND} cp $(realpath $F) $1:/host-exec"
-        ${DOCKER_COMMAND} cp "$(realpath $F)" "$1:/host-exec"  \
-         && ${DOCKER_COMMAND} exec -i "$1" /bin/bash /host-exec \
-         && ${DOCKER_COMMAND} exec -i "$1" rm "$1:/host-exec"
+        ${DOCKER_COMMAND} exec -i "$1" /bin/bash /hepfarm/$(basename $F)
+        rm $F
     }
     #PORTAGES_SNAPSHOT=(${BOB_DEP_PATHS[gentoo-portages]}/gentoo-*)
     #PORTAGES_SNAPSHOT_FILE=$(basename "$PORTAGES_SNAPSHOT")

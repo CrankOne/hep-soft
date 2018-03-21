@@ -11,7 +11,7 @@ buildVars:
 
 buildScript: |
     run_binfarm hepfarm ./packages ./portages.mount
-    cat <<EOF | exec_on_binfarm hepfarm
+    cat <<EOF | exec_on_binfarm hepfarm ./packages
     #!/bin/bash
     eselect profile set default/linux/amd64/17.0
     echo "=sys-devel/gcc-7.2.0 ~amd64" >> /etc/portage/package.keywords/gcc-7.2.0
