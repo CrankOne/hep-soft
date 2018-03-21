@@ -10,23 +10,120 @@ inherit: [in-docker]
 
 depends:
     - gentoo-portages
+    - binfarm-gentoo-base
 
 environment:
     GENTOO_BASE_IMAGE: "gentoo/stage3-amd64"
 
+buildVarsWeak:
+    - MEMORY_LIMIT
+
 buildVars: 
-    - PORTAGES_SNAPSHOT
-    - PORTAGES_SNAPSHOT_FILE
+    - DOCKER_COMMAND
+    - PORTAGES_SNAPSHOT_ID
+    - GENTOO_BASE_IMAGE
 
 buildTools: [docker]
 buildScript: |
-    # Note: these few are only used when portages are on the squashfs:
+    #
+    # Squashfs portages
     mount_sqfs_portages() {
-        mkdir -p portages.mount
-        squashfuse "$PORTAGES_SNAPSHOT" portages.mount
+        TARGET=$(realpath $1)
+        # ^^^ TODO: store this mountpoint for further capture
+        if [ ! -d "$TARGET" ] ; then
+            mkdir -p "$TARGET"
+        else
+            if mountpoint -q "$TARGET" ; then
+                (>&2 echo "Warning $TARGET is mounted. Unmounting prior to proceed.")
+                fusermount -u "$TARGET"
+            fi
+        fi
+        PORTAGES_SNAPSHOT="${BOB_DEP_PATHS[gentoo-portages]}/gentoo-"$PORTAGES_SNAPSHOT_ID"*.xz.sqfs"
+        if [ -e $PORTAGES_SNAPSHOT ] ; then
+            squashfuse $PORTAGES_SNAPSHOT $1
+            if [ $? -eq 0 ] ; then
+                trap "umount_sqfs_portages $1" EXIT
+            fi
+        else
+            (>&2 echo "Has no snapshot archive $PORTAGES_SNAPSHOT to mount into $1.")
+            exit 1
+        fi
     }
     umount_sqfs_portages() {
-        fusermount -u portages.mount
+        if [ -d $1 ] ; then
+            mountpoint -q $1
+            if [ $? -eq 0 ] ; then
+                fusermount -u $1
+            else
+                (>&2 echo "Cleanup warning: $1 not mounted.")
+            fi
+        else
+            (>&2 echo "Cleanup warning: is $1 not a dir.")
+        fi
+    }
+    #
+    # General binfarm interface
+    run_binfarm() {
+        # args:
+        #   $1 -- container name
+        #   $2 -- dist packages dir name (./dist and ./pdkg)
+        #   $3 -- portages directory volume name (TODO: male it optional)
+        if [ "$(docker ps -a | grep $1)" ] ; then
+            (>&2 echo "Container $1 exists. Preserving it and falling back...")
+            exit 1  # existing container
+        fi
+        if [[ ! -d $2 || ! -d $2/dist || $2/pkg ]] ; then
+            mkdir -p $2/dist    # for Gentoo distfiles
+            mkdir -p $2/pkg     # for generated binary packages
+        fi
+        mount_sqfs_portages $3
+        if [ $? -ne 0 ] ; then
+            exit 2  # failed to mount portage
+        fi
+        # TODO: check, if portages dir is given
+        # TODO: check, if we aren't at SELinux and change z switch
+        ${DOCKER_COMMAND} run -d --memory=${MEMORY_LIMIT} \
+                              -v $(realpath $2):/hepfarm:z \
+                              -v $(realpath $3):/usr/portage:z \
+                              --name $1 \
+                              ${GENTOO_BASE_IMAGE} /bin/sh -c "tail -f /dev/null"
+        if [ $? -eq 0 ] ; then
+            trap "stop_binfarm  $1 $3" EXIT
+        else
+            exit 3  # failed to run container
+        fi
+    }
+    stop_binfarm() {
+        if [ "$(docker ps -a | grep $1)" ] ; then
+            CONTAINER_STATUS=$(docker inspect -f {{.State.Running}} $1)
+            if [[ false != $CONTAINER_STATUS ]] ; then
+                echo "Stopping container \"$1\""
+                ${DOCKER_COMMAND} stop $1
+            fi
+            ${DOCKER_COMMAND} rm $1
+        fi
+        umount_sqfs_portages $2
+    }
+    exec_on_binfarm() {
+        if [ "$(docker ps -a | grep $1)" ] ; then
+            CONTAINER_STATUS=$(docker inspect -f {{.State.Running}} $1)
+            if [[ false == $CONTAINER_STATUS ]] ; then
+                (>&2 echo "Error: container $1 is stopped (.State.Running=$CONTAINER_STATUS).")
+                exit 1
+            fi
+        else
+            (>&2 echo "Has no container $1.")
+            exit 1
+        fi
+        echo -e "[class gentoo-build] exec on container \033[1;32m$1\033[0m:"
+        #read -r -d "\n" CMDS
+        F=./host-exec
+        tee $F
+        #printf '%s\n' "${CMDS[@]}" > $F
+        #echo "${DOCKER_COMMAND} cp $(realpath $F) $1:/host-exec"
+        ${DOCKER_COMMAND} cp "$(realpath $F)" "$1:/host-exec"  \
+         && ${DOCKER_COMMAND} exec -i "$1" /bin/bash /host-exec \
+         && ${DOCKER_COMMAND} exec -i "$1" rm "$1:/host-exec"
     }
     #PORTAGES_SNAPSHOT=(${BOB_DEP_PATHS[gentoo-portages]}/gentoo-*)
     #PORTAGES_SNAPSHOT_FILE=$(basename "$PORTAGES_SNAPSHOT")

@@ -15,4 +15,7 @@ environment:
     # This variable controls system-wide configuration of the generated OS
     # image. Currently only [dev|prod] variants are supported.
     SYS_PROFILE: dev
+    #
+    # Docker settings
+    MEMORY_LIMIT: 1g
 

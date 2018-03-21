@@ -23,32 +23,35 @@ checkoutScript: |
     # further copy the minimal gentoo release.
     mkdir -p .
     cd .
-    # TODO: depending on Docker version, the -ms or no-ms Dockerfile should be
-    # choosen, defining further operations.
-    # ___ code below is for no-ms docker (below v 17.xx)
-    #     TODO: envisage some cleaning-up measures on failure.
-    #     - copy file governing deployment of Gentoo stage3 within bootstrap:
-    cp $<<gentoo/hep-bootstrap-no-ms.Dockerfile>> ./Dockerfile
-    #     - fetch and re-pack the stage3 of certain version:
-    #     note: --build-arg BOOTSTRAP="${GENTOO_BOOTSTRAP}" for multi-stage
-    ${DOCKER_COMMAND} build \
-                      --build-arg ARCH="${GENTOO_STAGE3_ARCH}" \
-                      --build-arg MICROARCH="${GENTOO_STAGE3_MIRROR}" \
-                      --build-arg SUFFIX="${GENTOO_STAGE3_SUFFIX}" \
-                      --build-arg TAG="${GENTOO_STAGE3_TAG}" \
-                      --build-arg DIST="${GENTOO_STAGE3_MIRROR}" \
-                      --tag hep-bootstrap:${GENTOO_STAGE3_TAG} \
-                      .
-    #     - copy re-packed stage3 from bootstrap container
-    ${DOCKER_COMMAND} run -d --memory=4m --name hep-bootstrap-cntr \
-                      hep-bootstrap:${GENTOO_STAGE3_TAG} \
-                      /bin/sh tail -f /dev/null
-    ${DOCKER_COMMAND} cp hep-bootstrap-cntr:/hep-stage3.tar .
-    #     - clean-up stuff, keeping only the archive of re-packed stage-3
-    ${DOCKER_COMMAND} rm hep-bootstrap-cntr
-    ${DOCKER_COMMAND} rmi hep-bootstrap:${GENTOO_STAGE3_TAG}
-    # ^^^ code above is for no-ms docker
-    # ... TODO: else -ms build ...
+    if [ ! -e hep-stage3.tar ] ; then
+        # TODO: depending on Docker version, the -ms or no-ms Dockerfile should
+        # be choosen, defining further operations.
+        # ___ code below is for no-ms docker (below v 17.xx)
+        #     TODO: envisage some cleaning-up measures on failure.
+        #     - copy file governing deployment of Gentoo stage3 within
+        #     bootstrap:
+        cp $<<gentoo/hep-bootstrap-no-ms.Dockerfile>> ./Dockerfile
+        #     - fetch and re-pack the stage3 of certain version:
+        #     note: --build-arg BOOTSTRAP="${GENTOO_BOOTSTRAP}" for multi-stage
+        ${DOCKER_COMMAND} build \
+                          --build-arg ARCH="${GENTOO_STAGE3_ARCH}" \
+                          --build-arg MICROARCH="${GENTOO_STAGE3_MIRROR}" \
+                          --build-arg SUFFIX="${GENTOO_STAGE3_SUFFIX}" \
+                          --build-arg TAG="${GENTOO_STAGE3_TAG}" \
+                          --build-arg DIST="${GENTOO_STAGE3_MIRROR}" \
+                          --tag hep-bootstrap:${GENTOO_STAGE3_TAG} \
+                          .
+        #     - copy re-packed stage3 from bootstrap container
+        ${DOCKER_COMMAND} run -d --memory=4m --name hep-bootstrap-cntr \
+                          hep-bootstrap:${GENTOO_STAGE3_TAG} \
+                          /bin/sh tail -f /dev/null
+        ${DOCKER_COMMAND} cp hep-bootstrap-cntr:/hep-stage3.tar .
+        #     - clean-up stuff, keeping only the archive of re-packed stage-3
+        ${DOCKER_COMMAND} rm hep-bootstrap-cntr
+        ${DOCKER_COMMAND} rmi hep-bootstrap:${GENTOO_STAGE3_TAG}
+        # ^^^ code above is for no-ms docker
+        # ... TODO: else -ms build ...
+    fi
 
 buildVars: 
     - DOCKER_COMMAND
@@ -56,6 +59,7 @@ buildVars:
     - SYS_PROFILE
 
 buildScript: |
+    selinux_check
     # Import the re-packed stage-3 as an "binfarm-gentoo-prelim:..." image
     ${DOCKER_COMMAND} import $1/hep-stage3.tar binfarm-gentoo-prelim:${GENTOO_STAGE3_TAG}
     # Eval the corresponding Dockerfile to tune the environment w.r.t to
