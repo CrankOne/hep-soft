@@ -1,4 +1,4 @@
-packageScript: |
+checkoutScript: |
     fetch_file() {
         URL=$1
         FILENAME=$(basename "$URL")

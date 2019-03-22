@@ -1,12 +1,21 @@
-root: True
+inherit: [in-docker]
+
+root: true
 
 depends:
-    -
-        name: docker-wrapper
-        use: [environment, tools]
-        forward: True
-    - binfarm-gentoo-base
-    - binfarm-gentoo-hep
+    - binfarm-base
+    - gentoo-portages
+
+buildVars:
+    - DOCKER_CMD
+    - GENTOO_STG3_TAG
 
 buildScript:
-    echo "Bob needs build script to not be empty." > /dev/null
+    docker run --rm --volume 
+    #mkdir -p assets
+    #echo "FROM gentoo-hep-base:${GENTOO_STG3_TAG}" > Dockerfile
+    #cat $<<gentoo/hep-bootstrap-no-ms.Dockerfile>> >> Dockerfile
+    #$DOCKER_CMD build \
+    #    --build-arg ONE="two" \
+    #    .
+

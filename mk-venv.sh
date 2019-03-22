@@ -4,21 +4,21 @@
 # and install "bob" prerequisites.
 
 # for fedora:27
-VENV=virtualenv-3
+VENV="python3 -m venv"
 VENV_PIP=pip
 GIT=git
 MAKE=make
 
-${VENV} --prompt="@\033[1;32mvenv-3\033[0m\n" ./.venv
+${VENV} ./.venv
 . ./.venv/bin/activate
 ${VENV_PIP} install --upgrade pip
 ${VENV_PIP} install schema PyYAML pyparsing
 
 ${GIT} clone https://github.com/BobBuildTool/bob.git ./.bob-src
-cd ./.bob-src
+pushd ./.bob-src
 ${MAKE}
 ${MAKE} install DESTDIR=$(realpath ../.bob)
-cd ..
+popd
 
 echo -n "Bob has been installed to $(realpath .bob)."
 echo -n " Run it as $(realpath .bob)/bin/bob or"

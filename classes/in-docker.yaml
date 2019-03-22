@@ -1,12 +1,29 @@
+buildVars:
+    - DOCKER_CMD
+
 buildScript: |
+    RC=0
+    # Check if docker is around and try to access the daemon
+    which $DOCKER_CMD || RC=$? || true
+    if [ $RC -ne 0 ] ; then
+        (>&2 echo "Error: unable to determine the docker command.")
+        exit 1
+    fi
+    sudo $DOCKER_CMD ps > /dev/null 2>&1 || RC=$? || true
+    if [ $RC -ne 0 ] ; then
+        (>&2 echo "Error: unable to invoke the docker exec.")
+        exit 1
+    fi
+
+packageVars:
+    - DOCKER_CMD
+
+packageScript: |
     selinux_check() {
         ENFORCEVAL=$(getenforce)
         if [ $? -ne 0 ] ; then
             # ok, we're not in SELinux
-            return;
+            return 0
         fi
-        if [ "$ENFORCEVAL" == "Enforcing" ] ; then
-            (>&2 echo "SELinux policy is set to \"$ENFORCEVAL\". Troubles are"
-                " possible in case of some strong userspace operations.")
-        fi
+        return 1
     }

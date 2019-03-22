@@ -1,0 +1,93 @@
+# NOTE: needs cURL, sed, basename, docker, ln, readlink
+root: true  #< XXX
+
+inherit: [in-docker, fetch]
+
+checkoutVars:
+    - GENTOO_DISTFILES_MIRROR
+    - GENTOO_ARCH
+    - GENTOO_STG3_TAG
+
+checkoutScript: |
+    mkdir -p . && cd .
+    if [ ! -z "${GENTOO_STG3_TAG}" ] ; then
+        GENTOO_STG3_ARCHIVE="${GENTOO_DISTFILES_MIRROR}/releases/${GENTOO_ARCH}/autobuilds/${GENTOO_STG3_TAG}/stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar.xz"
+    else
+        # If GENTOO_STG3_TAG is not set, we have to deduce it automatically from
+        # the distfiles mirror available:
+        GENTOO_REM_DIR="${GENTOO_DISTFILES_MIRROR}/releases/${GENTOO_ARCH}/autobuilds/current-stage3-amd64/"
+        IMAGE_FILE=$(curl -s "$GENTOO_REM_DIR" --list-only | sed -n \
+            's%.*href="\(stage3-'${GENTOO_ARCH}'\+-[^-.]\+\.tar\.xz\)".*%\n\1%; ta; b; :a; s%.*\n%%; p')
+        if [ -z "${IMAGE_FILE}" ] ; then
+            (>&2 echo "Unable to retrieve any .tar.xz from ${GENTOO_REM_DIR} remote catalogue." )
+            exit 1
+        fi
+        # There might be more than one file:
+        if (( $(grep -c . <<<"$IMAGE_FILE") > 1 )) ; then
+            (>&2 echo -e "More than one .tar.xz file found at ${GENTOO_REM_DIR} remote catalogue:\n${IMAGE_FILE}" )
+            exit 1
+        fi
+        GENTOO_STG3_TAG=$(echo "${IMAGE_FILE}" | sed -n 's/stage3-'${GENTOO_ARCH}'-\([^-.]\+\)\.tar\.xz/\1/p')
+        # Check that we've indeed had set something
+        if [ -z "${GENTOO_STG3_TAG}" ] ; then
+            (>&2 echo "Unable to retrieve any version tag from ${IMAGE_FILE} remote file name found by automatic substitution." )
+            exit 1
+        else
+            (>&2 echo "Gentoo stage3 version tag has been automatically resolved to ${GENTOO_STG3_TAG}." )
+        fi
+        # Set the source directory for fetching
+        GENTOO_STG3_ARCHIVE="${GENTOO_DISTFILES_MIRROR}/releases/${GENTOO_ARCH}/autobuilds/current-stage3-${GENTOO_ARCH}/stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar.xz"
+    fi
+
+    # Assure the stage3 archive is available
+    if [ ! -e $(basename "${GENTOO_STG3_ARCHIVE}") ] ; then
+        fetch_file "${GENTOO_STG3_ARCHIVE}"
+    fi
+    ln -fs $(basename "${GENTOO_STG3_ARCHIVE}") stage3.tar.xz
+
+buildVars:
+    - GENTOO_ARCH
+    - GENTOO_STG3_TAG
+
+buildScript: |
+    # Retrieve the stage3 filename based on currently active symlink
+    ln -s $1/stage3.tar.xz stage3.tar.xz
+    GENTOO_STG3_ARCHIVE=$(readlink -f stage3.tar.xz)
+    GENTOO_STG3_ARCHIVE=$(basename $GENTOO_STG3_ARCHIVE)
+    GENTOO_STG3_TAG=$(echo "${GENTOO_STG3_ARCHIVE}" | sed -n 's/stage3-'${GENTOO_ARCH}'-\([^-.]\+\)\.tar\.xz/\1/p')
+    # Create new Docker container from scratch exploiting fetched stage3
+    # archive.
+    if [ ! -e stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar ] ; then
+        unxz < $1/stage3.tar.xz > stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar
+    fi
+    IMGSLINE=$($DOCKER_CMD images | grep gentoo-hep-base | grep ${GENTOO_STG3_TAG})
+    if [ -z "${IMGSLINE}" ] ; then
+        # No image available -- import from archive
+        $DOCKER_CMD import stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar "gentoo-hep-base:${GENTOO_STG3_TAG}"
+    fi
+
+packageVars:
+    - GENTOO_ARCH
+    - GENTOO_STG3_TAG
+
+packageScript: |
+    # Obtain the tag, based on stage3 symlink
+    GENTOO_STG3_ARCHIVE=$(readlink -f $1/stage3.tar.xz)
+    GENTOO_STG3_ARCHIVE=$(basename $GENTOO_STG3_ARCHIVE)
+    GENTOO_STG3_TAG=$(echo "${GENTOO_STG3_ARCHIVE}" | sed -n 's/stage3-'${GENTOO_ARCH}'-\([^-.]\+\)\.tar\.xz/\1/p')
+    # Get the image description from docker
+    IMGSLINE=$($DOCKER_CMD images | grep gentoo-hep-base | grep ${GENTOO_STG3_TAG})
+    # Read the image identifiers for subsequent usage
+    read BINFARM_IMG_REPO BINFARM_IMG_TAG BINFARM_IMG_ID \
+            <<<$(echo $IMGSLINE | awk '{print $1,$2,$3}')
+    if [ -z "${BINFARM_IMG_ID}" ] ; then
+        (>&2 echo "Unable to find out the docker image ID.")
+    fi
+    # Run the container on bare image and quickpg all the default stuff for
+    # backup with all it's configs:
+    mkdir pkgs.${BINFARM_IMG_TAG}
+    $DOCKER_CMD run --rm \
+        --volume $(readlink -f ./pkgs.${BINFARM_IMG_TAG}):/usr/portage/packages:$([[ selinux_check ]] && echo z || echo rw) ${BINFARM_IMG_ID} \
+        /bin/sh -c 'quickpkg --include-config=y "*/*"'
+    ln -sf pkgs.${BINFARM_IMG_TAG} pkgs
+

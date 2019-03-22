@@ -1,7 +1,7 @@
 # For ms docker:
 #ARG BOOTSTRAP
 #FROM ${BOOTSTRAP:-alpine:3.7} as builder
-FROM alpine:3.7
+FROM alpine:3.9
 
 WORKDIR /gentoo
 

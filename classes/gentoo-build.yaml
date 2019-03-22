@@ -67,7 +67,7 @@ buildScript: |
         # args:
         #   $1 -- container name
         #   $2 -- dist packages dir name (./dist and ./pdkg)
-        #   $3 -- portages directory volume name (TODO: male it optional)
+        #   $3 -- portages directory volume name (TODO: make it optional)
         if [ "$(docker ps -a | grep $1)" ] ; then
             (>&2 echo "Container $1 exists. Preserving it and falling back...")
             exit 1  # existing container

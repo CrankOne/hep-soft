@@ -1,21 +1,33 @@
 environment:
-    #
+    # Specify target Gentoo platform:
+    GENTOO_ARCH: amd64
+    # Set this to string like 20180311T214502Z or 20190320T214501Z or leave
+    # blank/null for automatic deduction from latest ("current") location:
+    GENTOO_STG3_TAG: ''
+    # Set this to the convinient Gentoo Distfiles mirror:
+    #GENTOO_DISTFILES_MIRROR: 'http://distfiles.gentoo.org'
+    GENTOO_DISTFILES_MIRROR: 'https://ftp-osl.osuosl.org/pub/gentoo'
+    # Set this to the convinient Gentoo Portages mirror:
+    PORTAGES_SNAPSHOT_MIRROR: http://distfiles.gentoo.org
+    # Docker exec (todo: wrap as tool?)
+    #DOCKER: sudo /usr/bin/docker
+    # XXX, deprecated:
     # This variables defines initial stage3 image from which the Gentoo docker
     # image will be built in reproducable manner:
-    GENTOO_BOOTSTRAP: "multiarch/alpine:x86-v3.7"
+    #GENTOO_BOOTSTRAP: "multiarch/alpine:x86-v3.7"
     # ^^^ NOTE: may not be consumed depending on docker version
-    GENTOO_STAGE3_ARCH: "amd64"
-    GENTOO_STAGE3_MICROARCH: ""
-    GENTOO_STAGE3_SUFFIX: ""
-    GENTOO_STAGE3_MIRROR: "https://ftp-osl.osuosl.org/pub/gentoo/releases/amd64/autobuilds"
-    GENTOO_STAGE3_TAG: "20180311T214502Z"  # TODO: understand T...Z part it and rename var
+    #GENTOO_STAGE3_ARCH: "amd64"
+    #GENTOO_STAGE3_MICROARCH: ""
+    #GENTOO_STAGE3_SUFFIX: ""
+    #GENTOO_STAGE3_MIRROR: "https://ftp-osl.osuosl.org/pub/gentoo/releases/amd64/autobuilds"
+    #GENTOO_STAGE3_TAG: "20180311T214502Z"  # TODO: understand T...Z part it and rename var
     # Portage snapshot ID to provide reproducable builds:
-    PORTAGES_SNAPSHOT_ID: "20180318"
+    #PORTAGES_SNAPSHOT_ID: "20180318"
     #
     # This variable controls system-wide configuration of the generated OS
     # image. Currently only [dev|prod] variants are supported.
-    SYS_PROFILE: dev
+    #SYS_PROFILE: dev
     #
     # Docker settings
-    MEMORY_LIMIT: 1g
+    #MEMORY_LIMIT: 1g
 

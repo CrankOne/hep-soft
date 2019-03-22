@@ -1,0 +1,12 @@
+root: True
+
+depends:
+    -
+        name: docker-wrapper
+        use: [environment, tools]
+        forward: True
+    - binfarm-gentoo-base
+    - binfarm-gentoo-hep
+
+buildScript:
+    echo "Bob needs build script to not be empty." > /dev/null
