@@ -9,8 +9,12 @@ depends:
 buildVars:
     - DOCKER_CMD
     - GENTOO_STG3_TAG
+    - BINFARM_CONFIG
+    - FAKEROOT_CMD
 
 buildScript:
+    mkdir portages.tmp
+    $FAKEROOT_CMD unsquashfs -d ./portages.tmp -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs
     docker run --rm --volume 
     #mkdir -p assets
     #echo "FROM gentoo-hep-base:${GENTOO_STG3_TAG}" > Dockerfile

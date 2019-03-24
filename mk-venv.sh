@@ -20,8 +20,10 @@ ${MAKE}
 ${MAKE} install DESTDIR=$(realpath ../.bob)
 popd
 
-echo -n "Bob has been installed to $(realpath .bob)."
-echo -n " Run it as $(realpath .bob)/bin/bob or"
-echo    " add the $(realpath .bob) to your system PATH."
+ln -s ../../.bob/bin/bob .venv/bin/bob
+
+#echo -n "Bob has been installed to $(realpath .bob)."
+#echo -n " Run it as $(realpath .bob)/bin/bob or"
+#echo    " add the $(realpath .bob) to your system PATH."
 
 

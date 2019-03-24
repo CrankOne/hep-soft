@@ -3,6 +3,9 @@ root: true  #< XXX
 
 inherit: [in-docker, fetch]
 
+depends:
+    - gentoo-portages
+
 checkoutVars:
     - GENTOO_DISTFILES_MIRROR
     - GENTOO_ARCH
@@ -50,6 +53,8 @@ buildVars:
     - GENTOO_STG3_TAG
 
 buildScript: |
+    # Deduce the mount options
+    MOUNTOPTS=$([[ selinux_check ]] && echo z || echo rw)
     # Retrieve the stage3 filename based on currently active symlink
     ln -s $1/stage3.tar.xz stage3.tar.xz
     GENTOO_STG3_ARCHIVE=$(readlink -f stage3.tar.xz)
@@ -66,11 +71,6 @@ buildScript: |
         $DOCKER_CMD import stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar "gentoo-hep-base:${GENTOO_STG3_TAG}"
     fi
 
-packageVars:
-    - GENTOO_ARCH
-    - GENTOO_STG3_TAG
-
-packageScript: |
     # Obtain the tag, based on stage3 symlink
     GENTOO_STG3_ARCHIVE=$(readlink -f $1/stage3.tar.xz)
     GENTOO_STG3_ARCHIVE=$(basename $GENTOO_STG3_ARCHIVE)
@@ -85,9 +85,20 @@ packageScript: |
     fi
     # Run the container on bare image and quickpg all the default stuff for
     # backup with all it's configs:
-    mkdir pkgs.${BINFARM_IMG_TAG}
+    mkdir -p ./portages.${BINFARM_IMG_TAG}
+    unsquashfs -d ./portages.${BINFARM_IMG_TAG} -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs
     $DOCKER_CMD run --rm \
-        --volume $(readlink -f ./pkgs.${BINFARM_IMG_TAG}):/usr/portage/packages:$([[ selinux_check ]] && echo z || echo rw) ${BINFARM_IMG_ID} \
-        /bin/sh -c 'quickpkg --include-config=y "*/*"'
+        --volume $(readlink -f ./portages.${BINFARM_IMG_TAG}):/usr/portage:${MOUNTOPTS} \
+        ${BINFARM_IMG_ID} \
+        /bin/sh -c 'emerge sys-fs/squashfs-tools && quickpkg --include-config=y "*/*" && rm -rf /usr/portage/distfiles && chmod -R a+rwx /usr/portage/packages'
+    mv ./portages.${BINFARM_IMG_TAG}/packages pkgs.${BINFARM_IMG_TAG}
+    rm -rf ./portages.${BINFARM_IMG_TAG}/packages
     ln -sf pkgs.${BINFARM_IMG_TAG} pkgs
+
+packageVars:
+    - GENTOO_ARCH
+    - GENTOO_STG3_TAG
+
+packageScript: |
+    ln -sf $1/pkgs pkgs
 

@@ -1,14 +1,29 @@
 environment:
+    # How to connect with the Docker daemon. `sudo docker` shall be tolerable
+    # as well for builds under ordinary user.
+    DOCKER_CMD: docker
+
     # Specify target Gentoo platform:
     GENTOO_ARCH: amd64
     # Set this to string like 20180311T214502Z or 20190320T214501Z or leave
     # blank/null for automatic deduction from latest ("current") location:
     GENTOO_STG3_TAG: ''
     # Set this to the convinient Gentoo Distfiles mirror:
-    #GENTOO_DISTFILES_MIRROR: 'http://distfiles.gentoo.org'
+    # GENTOO_DISTFILES_MIRROR: 'http://distfiles.gentoo.org'
     GENTOO_DISTFILES_MIRROR: 'https://ftp-osl.osuosl.org/pub/gentoo'
     # Set this to the convinient Gentoo Portages mirror:
     PORTAGES_SNAPSHOT_MIRROR: http://distfiles.gentoo.org
+
+    # See the `$ eselect profile list' for list of available Gentoo profiles.
+    # In short, it defines the very basic Gentoo system: glibc, gcc and so on.
+    # The default desktop profile is pretty bare and we do further customize it
+    # with make.conf.
+    HEPFARM_PROFILE: default/linux/amd64/17.0/desktop
+    # Configuration choosen for the binary farm. Must be one of the following
+    # sub-directories: debug, production, splitdebug, from
+    # `recipes/binfarm-hep/':
+    HEPFARM_CFG: production
+
     # Docker exec (todo: wrap as tool?)
     #DOCKER: sudo /usr/bin/docker
     # XXX, deprecated:

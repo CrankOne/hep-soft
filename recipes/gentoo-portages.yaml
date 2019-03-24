@@ -1,4 +1,4 @@
-inherit: [fetch]
+inherit: [fetch, selinux-check]
 
 root: true
 
@@ -7,21 +7,29 @@ checkoutVars:
     - PORTAGES_SNAPSHOT_ID
 
 checkoutScript: |
-    # Try to understand, whether we have a squashfuse installed on host:
     if which fusermount ; then
-        # download compressed squashfs, its hashsum
+        # Download compressed squashfs, check hashsum
         fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/sha512sum.txt
-        fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/gentoo-${PORTAGES_SNAPSHOT_ID:=latest}.xz.sqfs
+        fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/gentoo-${PORTAGES_SNAPSHOT_ID:=current}.xz.sqfs
         grep gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs ./sha512sum.txt | sha512sum -c
-        ln -s gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
+        ln -fs gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
     else  # TODO: suport other variants
         (>&2 echo "Error: no userspace squashfs available on system.")
         exit 1
     fi
 
 buildScript: |
-    ln -s $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
+    if selinux_check ; then
+        ln -fs $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
+    else
+        # Repack squashfs image for SELinux with `svirt_sandbox_file_t' xattr
+        mkdir -p portages.tmp
+        unsquashfs -d portages.tmp -f $1/gentoo-portages.xz.sqfs
+        chcon -R -t svirt_sandbox_file_t portages.tmp
+        mksquashfs ./portages.tmp gentoo-portages.xz.sqfs \
+            -xattrs -comp xz -force-uid 250 -force-gid 250
+    fi
 
 packageScript: |
-    ln -s $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
+    ln -fs $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
 

@@ -1,3 +1,5 @@
+inherit: [selinux-check]
+
 buildVars:
     - DOCKER_CMD
 
@@ -9,7 +11,7 @@ buildScript: |
         (>&2 echo "Error: unable to determine the docker command.")
         exit 1
     fi
-    sudo $DOCKER_CMD ps > /dev/null 2>&1 || RC=$? || true
+    $DOCKER_CMD ps > /dev/null 2>&1 || RC=$? || true
     if [ $RC -ne 0 ] ; then
         (>&2 echo "Error: unable to invoke the docker exec.")
         exit 1
@@ -18,12 +20,3 @@ buildScript: |
 packageVars:
     - DOCKER_CMD
 
-packageScript: |
-    selinux_check() {
-        ENFORCEVAL=$(getenforce)
-        if [ $? -ne 0 ] ; then
-            # ok, we're not in SELinux
-            return 0
-        fi
-        return 1
-    }

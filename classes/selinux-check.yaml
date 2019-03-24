@@ -1,0 +1,19 @@
+buildScript: |
+    selinux_check() {
+        ENFORCEVAL=$(getenforce)
+        if [ $? -ne 0 ] ; then
+            # ok, we're not in SELinux
+            return 0
+        fi
+        return 1
+    }
+
+packageScript: |
+    selinux_check() {
+        ENFORCEVAL=$(getenforce)
+        if [ $? -ne 0 ] ; then
+            # ok, we're not in SELinux
+            return 0
+        fi
+        return 1
+    }
