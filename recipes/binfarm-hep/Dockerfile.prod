@@ -1,0 +1,4 @@
+# ^^^ the FROM instruction is to be added here by Bob recipe.
+
+RUN mkdir -p /etc/portage/env
+

@@ -10,16 +10,35 @@ buildVars:
     - DOCKER_CMD
     - GENTOO_STG3_TAG
     - BINFARM_CONFIG
-    - FAKEROOT_CMD
 
-buildScript:
-    mkdir portages.tmp
-    $FAKEROOT_CMD unsquashfs -d ./portages.tmp -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs
-    docker run --rm --volume 
-    #mkdir -p assets
-    #echo "FROM gentoo-hep-base:${GENTOO_STG3_TAG}" > Dockerfile
-    #cat $<<gentoo/hep-bootstrap-no-ms.Dockerfile>> >> Dockerfile
-    #$DOCKER_CMD build \
-    #    --build-arg ONE="two" \
-    #    .
+buildScript: |
+    cp -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
+    cp $<<binfarm-hep/hepfarm.sh>> hepfarm.sh
+    #
+    cat << EOF > Dockerfile
+    FROM gentoo-hep-base:${GENTOO_STG3_TAG}
+    COPY make.conf /etc/portage/make.conf
+    COPY gentoo-portages.xz.sqfs /portages.xz.sqfs
+    COPY hepfarm.sh hepfarm.sh
+    VOLUME ["/usr/portage" "/hepfarm/dist" "/hepfarm/pkg"]
+    EOF
+    #
+    case ${BINFARM_CONFIG} in
+        'debug')
+            cat $<<binfarm-hep/Dockerfile.dbg>> >> Dockerfile
+            cp $<<binfarm-hep/make.conf.dbg>>  ./make.conf
+            ;;
+        'production')
+            cat $<'binfarm-hep/Dockerfile.prod'> >> Dockerfile
+            cp $<<binfarm-hep/make.conf.prod>>  ./make.conf
+            ;;
+        *)
+            (>&2 echo "The BINFARM_CONFIG=\"${BINFARM_CONFIG}\" is not supported.")
+            ;;
+    esac
+    echo 'RUN /bin/sh /hepfarm.sh && rm hepfarm.sh' >> Dockerfile
+    #
+    $DOCKER_CMD build --tag hep-bootstrap:${GENTOO_STG3_TAG} .
+    #
+    rm gentoo-portages.xz.sqfs hepfarm.sh
 

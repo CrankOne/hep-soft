@@ -1,9 +1,5 @@
 #!/bin/bash
 
-eselect profile set default/linux/amd64/17.0
-
-echo "=sys-devel/gcc-7.2.0 ~amd64" >> /etc/portage/package.keywords/gcc-7.2.0
-emerge -a =sys-devel/gcc-7.2.0
 emerge -uDN @world
 
 emerge =app-portage/gentoolkit-0.4.0::gentoo \

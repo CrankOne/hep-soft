@@ -60,23 +60,22 @@ buildScript: |
     GENTOO_STG3_ARCHIVE=$(readlink -f stage3.tar.xz)
     GENTOO_STG3_ARCHIVE=$(basename $GENTOO_STG3_ARCHIVE)
     GENTOO_STG3_TAG=$(echo "${GENTOO_STG3_ARCHIVE}" | sed -n 's/stage3-'${GENTOO_ARCH}'-\([^-.]\+\)\.tar\.xz/\1/p')
+    if [ -z "${GENTOO_STG3_TAG}" ] ; then
+        ( >&2 echo "Unable to obtain stage3 tag." )
+        exit 1
+    fi
     # Create new Docker container from scratch exploiting fetched stage3
     # archive.
     if [ ! -e stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar ] ; then
         unxz < $1/stage3.tar.xz > stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar
     fi
-    IMGSLINE=$($DOCKER_CMD images | grep gentoo-hep-base | grep ${GENTOO_STG3_TAG})
-    if [ -z "${IMGSLINE}" ] ; then
+    IMGSLINE=$($DOCKER_CMD images gentoo-hep-base)
+    if ! echo "${IMGSLINE}" | grep ${GENTOO_STG3_TAG} ; then
         # No image available -- import from archive
         $DOCKER_CMD import stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar "gentoo-hep-base:${GENTOO_STG3_TAG}"
+        IMGSLINE=$($DOCKER_CMD images gentoo-hep-base)
     fi
-
-    # Obtain the tag, based on stage3 symlink
-    GENTOO_STG3_ARCHIVE=$(readlink -f $1/stage3.tar.xz)
-    GENTOO_STG3_ARCHIVE=$(basename $GENTOO_STG3_ARCHIVE)
-    GENTOO_STG3_TAG=$(echo "${GENTOO_STG3_ARCHIVE}" | sed -n 's/stage3-'${GENTOO_ARCH}'-\([^-.]\+\)\.tar\.xz/\1/p')
-    # Get the image description from docker
-    IMGSLINE=$($DOCKER_CMD images | grep gentoo-hep-base | grep ${GENTOO_STG3_TAG})
+    IMGSLINE=$(echo "${IMGSLINE}" | grep ${GENTOO_STG3_TAG})
     # Read the image identifiers for subsequent usage
     read BINFARM_IMG_REPO BINFARM_IMG_TAG BINFARM_IMG_ID \
             <<<$(echo $IMGSLINE | awk '{print $1,$2,$3}')

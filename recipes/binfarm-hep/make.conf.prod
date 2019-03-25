@@ -1,0 +1,18 @@
+# "nostrip" -- will provide the names of symbols in all the ELF object files.
+#       As a drawback, the size of binaries may become dramatically bigger.
+# "buildpkg" -- makes binary package each time emerge finishes building new
+#       package.
+FEATURES="buildpkg"
+
+CFLAGS="-O2 -pipe"
+
+PORTDIR="/usr/portage"
+DISTDIR="/hepfarm/dist"
+PKGDIR="/hepfarm/pkg"
+
+LC_MESSAGES=C
+
+PYTHON_SINGLE_TARGET="python3_6"
+PYTHON_TARGETS="python2_7 python3_6"
+
+USE="sqlite"
