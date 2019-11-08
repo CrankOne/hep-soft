@@ -1,6 +1,6 @@
 inherit: [in-docker]
 
-# Note: this script defines two functions that come on stage when portages
+# Note: this script defines few functions that are used when portages
 # snapshot is located on compressed squashfs system. Internally, invokes FUSE
 # mouting procedures for squashfs:
 # mount:
@@ -18,8 +18,9 @@ environment:
 buildVarsWeak:
     - MEMORY_LIMIT
 
-buildVars: 
-    - DOCKER_COMMAND
+buildVars:
+    - DOCKER_CMD
+    - FUSERUMOUNT_CMD
     - PORTAGES_SNAPSHOT_ID
     - GENTOO_BASE_IMAGE
 
@@ -28,14 +29,15 @@ buildScript: |
     #
     # Squashfs portages
     mount_sqfs_portages() {
+        # $1 is the squashed portages image.
         TARGET=$(realpath $1)
         # ^^^ TODO: store this mountpoint for further capture
         if [ ! -d "$TARGET" ] ; then
             mkdir -p "$TARGET"
         else
-            if mountpoint -q "$TARGET" ; then
+            if $QUERY_MOUNTPOINT_CMD "$TARGET" ; then
                 (>&2 echo "Warning $TARGET is mounted. Unmounting prior to proceed.")
-                fusermount -u "$TARGET"
+                $FUSERUMOUNT_CMD "$TARGET"
             fi
         fi
         PORTAGES_SNAPSHOT="${BOB_DEP_PATHS[gentoo-portages]}/gentoo-"$PORTAGES_SNAPSHOT_ID"*.xz.sqfs"
@@ -51,9 +53,9 @@ buildScript: |
     }
     umount_sqfs_portages() {
         if [ -d $1 ] ; then
-            mountpoint -q $1
+            $QUERY_MOUNTPOINT_CMD $1
             if [ $? -eq 0 ] ; then
-                fusermount -u $1
+                $FUSERUMOUNT_CMD $1
             else
                 (>&2 echo "Cleanup warning: $1 not mounted.")
             fi
@@ -82,7 +84,7 @@ buildScript: |
         fi
         # TODO: check, if portages dir is given
         # TODO: check, if we aren't at SELinux and change z switch
-        ${DOCKER_COMMAND} run -d --memory=${MEMORY_LIMIT} \
+        ${DOCKER_CMD} run -d --memory=${MEMORY_LIMIT} \
                               -v $(realpath $2):/hepfarm:Z \
                               -v $(realpath $3):/usr/portage:ro \
                               --name $1 \
@@ -98,9 +100,9 @@ buildScript: |
             CONTAINER_STATUS=$(docker inspect -f {{.State.Running}} $1)
             if [[ false != $CONTAINER_STATUS ]] ; then
                 echo "Stopping container \"$1\""
-                ${DOCKER_COMMAND} stop $1
+                ${DOCKER_CMD} stop $1
             fi
-            ${DOCKER_COMMAND} rm $1
+            ${DOCKER_CMD} rm $1
         fi
         umount_sqfs_portages $2
     }
@@ -120,7 +122,7 @@ buildScript: |
         F=$(mktemp -p $2)
         tee $F
         #printf '%s\n' "${CMDS[@]}" > $F
-        ${DOCKER_COMMAND} exec -i "$1" /bin/bash /hepfarm/$(basename $F)
+        ${DOCKER_CMD} exec -i "$1" /bin/bash /hepfarm/$(basename $F)
         rm $F
     }
     #PORTAGES_SNAPSHOT=(${BOB_DEP_PATHS[gentoo-portages]}/gentoo-*)

@@ -6,6 +6,10 @@ inherit: [in-docker, fetch]
 depends:
     - gentoo-portages
 
+# Obtains stage3 Gentoo archive: latest, or referred with GENTOO_STG3_TAG
+# config var. Saves it in `src/' and creates symlink `stage3.tar.xz' referring
+# to `stage3-${ARCH}-${TAG}.tar.xz' file.
+
 checkoutVars:
     - GENTOO_DISTFILES_MIRROR
     - GENTOO_ARCH
@@ -48,12 +52,18 @@ checkoutScript: |
     fi
     ln -fs $(basename "${GENTOO_STG3_ARCHIVE}") stage3.tar.xz
 
+# Creates new docker image based on the stage3 archive. Produces:
+# * the image stored in global docker storage (thus, normally referrable
+#   with `$ docker images') and makes the back-up portage snapshot.
+# * directory named `packages.${TAG}' at the `build/' containing unpacked
+#   portages tree
+
 buildVars:
     - GENTOO_ARCH
     - GENTOO_STG3_TAG
 
 buildScript: |
-    # Deduce the mount options
+    # Deduce the mount options with optional SELinux workaround
     MOUNTOPTS=$([[ selinux_check ]] && echo z || echo rw)
     # Retrieve the stage3 filename based on currently active symlink
     ln -s $1/stage3.tar.xz stage3.tar.xz
@@ -70,14 +80,19 @@ buildScript: |
         unxz < $1/stage3.tar.xz > stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar
     fi
     IMGSLINE=$($DOCKER_CMD images gentoo-hep-base)
+    # Create the image if it does not exist
     if ! echo "${IMGSLINE}" | grep ${GENTOO_STG3_TAG} ; then
         # No image available -- import from archive
         $DOCKER_CMD import stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar "gentoo-hep-base:${GENTOO_STG3_TAG}"
+        # line to unpack image (deprecated):
+        #   tar xpvf stage3-*.tar.bz2 --xattrs-include='*.*' --numeric-owner
         IMGSLINE=$($DOCKER_CMD images gentoo-hep-base)
     fi
     IMGSLINE=$(echo "${IMGSLINE}" | grep ${GENTOO_STG3_TAG})
     # Read the image identifiers for subsequent usage
-    read BINFARM_IMG_REPO BINFARM_IMG_TAG BINFARM_IMG_ID \
+    read BINFARM_IMG_REPO \
+         BINFARM_IMG_TAG \
+         BINFARM_IMG_ID \
             <<<$(echo $IMGSLINE | awk '{print $1,$2,$3}')
     if [ -z "${BINFARM_IMG_ID}" ] ; then
         (>&2 echo "Unable to find out the docker image ID.")
@@ -85,13 +100,23 @@ buildScript: |
     # Run the container on bare image and quickpg all the default stuff for
     # backup with all it's configs:
     mkdir -p ./portages.${BINFARM_IMG_TAG}
-    unsquashfs -d ./portages.${BINFARM_IMG_TAG} -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs
+    unsquashfs -d ./portages.${BINFARM_IMG_TAG} \
+               -no-xattrs \
+               -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs
+    # NOTE 08.11.019:
+    #   /usr/portage changed to /var/db/repos/gentoo
+    #   /usr/portage/distfiles to /var/cache/distfiles
+    #   /usr/portage/packages to /var/cache/binpkgs
+    # for recent snapshots
+    mkdir pkgs.${BINFARM_IMG_TAG}
     $DOCKER_CMD run --rm \
-        --volume $(readlink -f ./portages.${BINFARM_IMG_TAG}):/usr/portage:${MOUNTOPTS} \
+        --volume $(readlink -f ./portages.${BINFARM_IMG_TAG}):/var/db/repos/gentoo:${MOUNTOPTS} \
+        --volume $(readlink -f ./pkgs.${BINFARM_IMG_TAG}):/var/cache/binpkgs:${MOUNTOPTS} \
         ${BINFARM_IMG_ID} \
-        /bin/sh -c 'emerge sys-fs/squashfs-tools && quickpkg --include-config=y "*/*" && rm -rf /usr/portage/distfiles && chmod -R a+rwx /usr/portage/packages'
-    mv ./portages.${BINFARM_IMG_TAG}/packages pkgs.${BINFARM_IMG_TAG}
-    rm -rf ./portages.${BINFARM_IMG_TAG}/packages
+        /bin/sh -c 'emerge sys-fs/squashfs-tools \
+                 && quickpkg --include-config=y "*/*" \
+                 && rm -rf /usr/portage/distfiles \
+                 && chmod -R a+rwx /var/cache/binpkgs'
     ln -sf pkgs.${BINFARM_IMG_TAG} pkgs
 
 packageVars:

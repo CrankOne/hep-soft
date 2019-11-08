@@ -2,6 +2,11 @@ environment:
     # How to connect with the Docker daemon. `sudo docker` shall be tolerable
     # as well for builds under ordinary user.
     DOCKER_CMD: docker
+    # FUSE user umount command (e.g. "fusermount -u") Receives single operand
+    # referring the mountpoint to be unmounted (target dir).
+    FUSERUMOUNT_CMD: fusermount -u
+    # Shall return 0 if $1 refers to a valid mountpoint (e.g. "mountpoint -q")
+    QUERY_MOUNTPOINT_CMD: mountpoint -q
 
     # Specify target Gentoo platform:
     GENTOO_ARCH: amd64

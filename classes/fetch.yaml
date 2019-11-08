@@ -1,4 +1,6 @@
 checkoutScript: |
+    # Downloads the file referenced by URL in $1 into CWD if it does not exist,
+    # otherwise updates it to most actual copy (curl -z).
     fetch_file() {
         URL=$1
         FILENAME=$(basename "$URL")

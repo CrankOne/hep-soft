@@ -5,7 +5,12 @@ root: true
 checkoutVars:
     - PORTAGES_SNAPSHOT_MIRROR
     - PORTAGES_SNAPSHOT_ID
+    - FUSERUMOUNT_CMD
 
+# Downloads the portages snapshot identified by `PORTAGES_SNAPSHOT_ID'
+# variable and saves it to `gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs' with
+# symlink named `gentoo-portages.xz.sqfs'. Performs checksum test.
+# TODO: use `FUSERUMOUNT_CMD' instead of direct `fusermount'
 checkoutScript: |
     if which fusermount ; then
         # Download compressed squashfs, check hashsum
@@ -18,6 +23,8 @@ checkoutScript: |
         exit 1
     fi
 
+# Forwards portages snapshot symlink via the `build/' dir. For SELinux re-packs
+# the image with `svirt_sandbox_file_t' xattr.
 buildScript: |
     if selinux_check ; then
         ln -fs $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
@@ -30,6 +37,8 @@ buildScript: |
             -xattrs -comp xz -force-uid 250 -force-gid 250
     fi
 
+# Forwards portages snapshot squashfs symlink via the `dist/' dir
+# (named `gentoo-portages.xz.sqfs').
 packageScript: |
     ln -fs $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
 
