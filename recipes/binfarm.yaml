@@ -1,0 +1,77 @@
+# Customizes most basic stage3 Gentoo image making a boilerplate fo further
+# builds relevant to HEP: common useflags, compiler options, etc. The
+# scope is mostly restricted by system infrastructure level (no Geant4, ROOT,
+# etc).
+
+root: true
+
+# In this recipe the mount capabilites of the `docker-build' recipe are not
+# used, but since it provides some useful dependency assets we do use it here
+# (consider splitting docker-build onto couple of images).
+inherit: [gentoo-build]
+
+# Generates a Dockerfile and subsidiary assets for the binary farm docker
+# image.
+# Notes on features injected to make.conf:
+# "nostrip" -- will provide the names of symbols in all the ELF object files.
+#       As a drawback, the size of binaries may become dramatically bigger.
+# "buildpkg" -- makes binary package each time emerge finishes building new
+#       package.
+checkoutVars:
+    - GENTOO_STG3_TAG
+    - BINFARM_BUILD_TYPE
+    - GENTOO_PROFILE
+    - BINFARM_USERNAME
+    - BINFARM_USER_PASSWORD
+    - BINFARM_USER_SHELL
+checkoutScript: |
+    # Dockerfile common part
+    cat << EOF > Dockerfile
+    FROM gentoo-hep-base:${GENTOO_STG3_TAG}
+    COPY make.conf /etc/portage/make.conf
+    COPY gentoo-portages.xz.sqfs /portages.xz.sqfs
+    COPY $<<binfarm/init-binfarm.sh>> init-binfarm.sh
+    VOLUME ["/var/db/repos/gentoo" "/var/cache/distfiles" "/var/cache/binpkgs"]
+    RUN useradd -m -G users,wheel,audio -p \$(openssl passwd -1 ${BINFARM_USER_PASSWORD}) -s ${BINFARM_USER_SHELL} ${BINFARM_USERNAME}
+    RUN sh -c 'echo "${BINFARM_USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${BINFARM_USERNAME}'
+    EOF
+    # Conditional parts of dockerfile/make.conf
+    case ${BINFARM_BUILD_TYPE} in
+        'dbg')
+            echo 'FEATURES="nostrip buildpkg"' > make.conf
+            cat $<<binfarm/Dockerfile.dbg>> >> Dockerfile
+            ;;
+        'opt')
+            echo 'FEATURES="buildpkg"' > make.conf
+            cat $<<binfarm/Dockerfile.opt>> >> Dockerfile
+            ;;
+        *)
+            (>&2 echo "The BINFARM_BUILD_TYPE=\"${BINFARM_BUILD_TYPE}\" is not supported.")
+            ;;
+    esac
+    # Common part of `make.conf'
+    cat $<<binfarm/make.conf.common>> >> make.conf
+    #
+    echo "RUN sh /init-binfarm.sh ${GENTOO_PROFILE} && rm /init-binfarm.sh" >> Dockerfile
+
+buildVars:
+    - DOCKER_CMD
+    - GENTOO_STG3_TAG
+    - BINFARM_BUILD_TYPE
+buildScript: |
+    #cp -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs \
+    #      gentoo-portages.xz.sqfs
+    #cp $<<binfarm/init-binfarm.sh>> hepfarm.sh
+    # VOLUME ["/usr/portage" "/hepfarm/dist" "/hepfarm/pkg"]
+    #
+    cp $1/Dockerfile .
+    cp $1/make.conf .
+    mount_sqfs_portages portages.mnt.d
+    $DOCKER_CMD build --tag binfarm-${BINFARM_BUILD_TYPE}:${GENTOO_STG3_TAG} .
+    umount_sqfs_portages portages.mnt.d
+
+
+#echo "sci-physics/root" >> /etc/portage/package.keywords/root
+#echo "sci-physics/rootdavix fftw graphviz http pythia6 pythia8 root7 sqlite xrootd xinetd" >> /etc/portage/package.use/root
+#echo "media-libs/libafterimage png tiff gif jpeg" >> /etc/portage/package.use/libafterimage
+#emerge sci-physics/root-6.12.06

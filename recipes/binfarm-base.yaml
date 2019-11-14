@@ -54,7 +54,8 @@ checkoutScript: |
 
 # Creates new docker image based on the stage3 archive. Produces:
 # * the image stored in global docker storage (thus, normally referrable
-#   with `$ docker images') and makes the back-up portage snapshot.
+#   with `$ docker images') and makes the back-up portage snapshot. This image
+#   is the exact form of stage3 (without any modifications done).
 # * directory named `packages.${TAG}' at the `build/' containing unpacked
 #   portages tree
 
@@ -66,7 +67,7 @@ buildScript: |
     # Deduce the mount options with optional SELinux workaround
     MOUNTOPTS=$([[ selinux_check ]] && echo z || echo rw)
     # Retrieve the stage3 filename based on currently active symlink
-    ln -s $1/stage3.tar.xz stage3.tar.xz
+    ln -fs $1/stage3.tar.xz stage3.tar.xz
     GENTOO_STG3_ARCHIVE=$(readlink -f stage3.tar.xz)
     GENTOO_STG3_ARCHIVE=$(basename $GENTOO_STG3_ARCHIVE)
     GENTOO_STG3_TAG=$(echo "${GENTOO_STG3_ARCHIVE}" | sed -n 's/stage3-'${GENTOO_ARCH}'-\([^-.]\+\)\.tar\.xz/\1/p')
@@ -100,15 +101,17 @@ buildScript: |
     # Run the container on bare image and quickpg all the default stuff for
     # backup with all it's configs:
     mkdir -p ./portages.${BINFARM_IMG_TAG}
-    unsquashfs -d ./portages.${BINFARM_IMG_TAG} \
+    if [ ! "$(ls -A ./portages.${BINFARM_IMG_TAG})" ] ; then  # dir is empty
+        unsquashfs -d ./portages.${BINFARM_IMG_TAG} \
                -no-xattrs \
                -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs
+    fi
     # NOTE 08.11.019:
     #   /usr/portage changed to /var/db/repos/gentoo
     #   /usr/portage/distfiles to /var/cache/distfiles
     #   /usr/portage/packages to /var/cache/binpkgs
     # for recent snapshots
-    mkdir pkgs.${BINFARM_IMG_TAG}
+    mkdir -p pkgs.${BINFARM_IMG_TAG}
     $DOCKER_CMD run --rm \
         --volume $(readlink -f ./portages.${BINFARM_IMG_TAG}):/var/db/repos/gentoo:${MOUNTOPTS} \
         --volume $(readlink -f ./pkgs.${BINFARM_IMG_TAG}):/var/cache/binpkgs:${MOUNTOPTS} \

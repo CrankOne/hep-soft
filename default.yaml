@@ -1,16 +1,32 @@
 environment:
     # How to connect with the Docker daemon. `sudo docker` shall be tolerable
     # as well for builds under ordinary user.
+    # Used by number of recipes.
     DOCKER_CMD: docker
     # FUSE user umount command (e.g. "fusermount -u") Receives single operand
     # referring the mountpoint to be unmounted (target dir).
+    # Used by number of recipes.
     FUSERUMOUNT_CMD: fusermount -u
     # Shall return 0 if $1 refers to a valid mountpoint (e.g. "mountpoint -q")
     QUERY_MOUNTPOINT_CMD: mountpoint -q
+    # Configuration choosen for the binary farm. Must be one of the following
+    # variants: opt, dbg. Used by recipes/binfarm and determines content of
+    # all the packages built subsequently.
+    BINFARM_BUILD_TYPE: opt
+    # Username at the container, other than root used to build the software.
+    # (despite it might be eponymous to your host's docker user, it is
+    # independent one and can safely set to any convenient name)
+    BINFARM_USERNAME: collector
+    # User's password at the container
+    BINFARM_USER_PASSWORD: majestic12
+    # Shell used by default user (in case it is different from bash, do not
+    # forget to add it in `recipes/binfarm/init-binfarm.sh' initial
+    # installation)
+    BINFARM_USER_SHELL: /bin/bash
 
     # Specify target Gentoo platform:
     GENTOO_ARCH: amd64
-    # Set this to string like 20180311T214502Z or 20190320T214501Z or leave
+    # Set this to string like 20180311T214502Z or 20191106T214502Z or leave
     # blank/null for automatic deduction from latest ("current") location:
     GENTOO_STG3_TAG: ''
     # Set this to the convinient Gentoo Distfiles mirror:
@@ -18,16 +34,12 @@ environment:
     GENTOO_DISTFILES_MIRROR: 'https://ftp-osl.osuosl.org/pub/gentoo'
     # Set this to the convinient Gentoo Portages mirror:
     PORTAGES_SNAPSHOT_MIRROR: http://distfiles.gentoo.org
-
     # See the `$ eselect profile list' for list of available Gentoo profiles.
     # In short, it defines the very basic Gentoo system: glibc, gcc and so on.
     # The default desktop profile is pretty bare and we do further customize it
-    # with make.conf.
-    HEPFARM_PROFILE: default/linux/amd64/17.0/desktop
-    # Configuration choosen for the binary farm. Must be one of the following
-    # sub-directories: debug, production, splitdebug, from
-    # `recipes/binfarm-hep/':
-    HEPFARM_CFG: production
+    # with make.conf. Leave empty to use default profile shipped with
+    # binfarm-base.
+    GENTOO_PROFILE: default/linux/amd64/17.1
 
     # Docker exec (todo: wrap as tool?)
     #DOCKER: sudo /usr/bin/docker

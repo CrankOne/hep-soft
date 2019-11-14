@@ -1,0 +1,25 @@
+# "nostrip" -- will provide the names of symbols in all the ELF object files.
+#       As a drawback, the size of binaries may become dramatically bigger.
+# "buildpkg" -- makes binary package each time emerge finishes building new
+#       package.
+FEATURES="nostrip buildpkg"
+
+COMMON_FLAGS="-O2 -pipe"
+CFLAGS="${COMMON_FLAGS}"
+CXXFLAGS="${COMMON_FLAGS}"
+FCFLAGS="${COMMON_FLAGS}"
+FFLAGS="${COMMON_FLAGS}"
+
+# NOTE: deprecated in favor of `location' attribute of /etc/portage/repos.conf.
+PORTDIR="/var/db/repos/gentoo"
+# defines the location where Portage will store the downloaded source code archives
+DISTDIR="/var/cache/distfiles"  # former /hepfarm/dist
+# defines the location where Portage will store generated binary package files
+PKGDIR="/var/cache/binpkgs"     # former /hepfarm/pkg
+
+LC_MESSAGES=C
+
+PYTHON_SINGLE_TARGET="python3_6"
+PYTHON_TARGETS="python2_7 python3_6"
+
+USE="debug sqlite"

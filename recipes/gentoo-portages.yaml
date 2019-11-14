@@ -13,11 +13,32 @@ checkoutVars:
 # TODO: use `FUSERUMOUNT_CMD' instead of direct `fusermount'
 checkoutScript: |
     if which fusermount ; then
-        # Download compressed squashfs, check hashsum
+        # Update the checksums file
         fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/sha512sum.txt
-        fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/gentoo-${PORTAGES_SNAPSHOT_ID:=current}.xz.sqfs
-        grep gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs ./sha512sum.txt | sha512sum -c
-        ln -fs gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
+        # If $PORTAGES_SNAPSHOT_ID is not set, try to figure it out
+        # atomatically, by comparing `current' checksum and couple of the
+        # latest ones
+        if [ -z "${PORTAGES_SNAPSHOT_ID:=}" ] ; then
+            LATEST_CHECKSUM=$(grep gentoo-current.xz.sqfs ./sha512sum.txt | awk '{print $1}')
+            SNAPSHOT_FILENAME=$( grep $LATEST_CHECKSUM ./sha512sum.txt \
+                               | grep -E 'gentoo-[[:digit:]]*.xz.sqfs' \
+                               | awk '{print $2}')
+            if [ -z "${SNAPSHOT_FILENAME}" ] ; then
+                (>&2 echo "Unable to figure out latest portages snapshot filename.")
+                exit 1
+            fi
+            PORTAGES_SNAPSHOT_ID=$(echo $SNAPSHOT_FILENAME | sed -E 's/gentoo-([[:digit:]]+).xz.sqfs/\1/g')
+            echo "PORTAGES_SNAPSHOT_ID set to ${PORTAGES_SNAPSHOT_ID}"
+            test ${PORTAGES_SNAPSHOT_ID}  # `1' error code if empty
+        fi
+        if [ ! -e gentoo-portages.xz.sqfs ] ; then
+            # Download compressed squashfs, check hashsum
+            fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/gentoo-${PORTAGES_SNAPSHOT_ID:=current}.xz.sqfs
+            grep gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs ./sha512sum.txt | sha512sum -c
+            ln -fs gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
+        else
+            echo "File gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs exists, skipping fetch."
+        fi
     else  # TODO: suport other variants
         (>&2 echo "Error: no userspace squashfs available on system.")
         exit 1
@@ -27,18 +48,30 @@ checkoutScript: |
 # the image with `svirt_sandbox_file_t' xattr.
 buildScript: |
     if selinux_check ; then
+        # no repack needed, just make a symlink
         ln -fs $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
     else
-        # Repack squashfs image for SELinux with `svirt_sandbox_file_t' xattr
-        mkdir -p portages.tmp
-        unsquashfs -d portages.tmp -f $1/gentoo-portages.xz.sqfs
-        chcon -R -t svirt_sandbox_file_t portages.tmp
-        mksquashfs ./portages.tmp gentoo-portages.xz.sqfs \
-            -xattrs -comp xz -force-uid 250 -force-gid 250
+        if [ ! -e gentoo-portages.xz.sqfs ] ; then
+            echo "SELinux detected. Repacking squashfs image for SELinux with svirt_sandbox_file_t xattr."
+            # temporary storage for unpacked portages
+            mkdir -p portages.tmp
+            unsquashfs -d portages.tmp -f $1/gentoo-portages.xz.sqfs
+            # change SELinux attributes of unpacked files
+            chcon -R -t svirt_sandbox_file_t portages.tmp
+            # pack the stuff back
+            mksquashfs ./portages.tmp gentoo-portages.xz.sqfs \
+                -xattrs -comp xz -force-uid 250 -force-gid 250
+        else
+            echo "gentoo-portages.xz.sqfs exists, omitting repack of squashfs on SELinux"
+        fi
     fi
 
 # Forwards portages snapshot squashfs symlink via the `dist/' dir
 # (named `gentoo-portages.xz.sqfs').
 packageScript: |
     ln -fs $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
+    export PORTAGES_SNAPSHOT_ID=some
+
+provideVars:
+    GENTOO_PORTAGES_SNAPSHOT_ID: "$PORTAGES_SNAPSHOT_ID"
 

@@ -9,8 +9,9 @@ inherit: [in-docker]
 #   $ fusermount -u $(pwd)/mountpoint
 
 depends:
-    - gentoo-portages
-    - binfarm-gentoo-base
+    - name: gentoo-portages
+      use: [environment]
+    - binfarm-base
 
 environment:
     GENTOO_BASE_IMAGE: "gentoo/stage3-amd64"
@@ -21,15 +22,17 @@ buildVarsWeak:
 buildVars:
     - DOCKER_CMD
     - FUSERUMOUNT_CMD
-    - PORTAGES_SNAPSHOT_ID
+    - GENTOO_PORTAGES_SNAPSHOT_ID
     - GENTOO_BASE_IMAGE
 
 buildTools: [docker]
 buildScript: |
+    PORTAGES_SNAPSHOT="${BOB_DEP_PATHS[gentoo-portages]}/gentoo-"$GENTOO_PORTAGES_SNAPSHOT_ID"*.xz.sqfs"
+
     #
     # Squashfs portages
     mount_sqfs_portages() {
-        # $1 is the squashed portages image.
+        # $1 is the mountpoint.
         TARGET=$(realpath $1)
         # ^^^ TODO: store this mountpoint for further capture
         if [ ! -d "$TARGET" ] ; then
@@ -40,7 +43,6 @@ buildScript: |
                 $FUSERUMOUNT_CMD "$TARGET"
             fi
         fi
-        PORTAGES_SNAPSHOT="${BOB_DEP_PATHS[gentoo-portages]}/gentoo-"$PORTAGES_SNAPSHOT_ID"*.xz.sqfs"
         if [ -e $PORTAGES_SNAPSHOT ] ; then
             squashfuse $PORTAGES_SNAPSHOT $1
             if [ $? -eq 0 ] ; then
