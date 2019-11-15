@@ -28,12 +28,12 @@ checkoutScript: |
                 exit 1
             fi
             PORTAGES_SNAPSHOT_ID=$(echo $SNAPSHOT_FILENAME | sed -E 's/gentoo-([[:digit:]]+).xz.sqfs/\1/g')
-            echo "PORTAGES_SNAPSHOT_ID set to ${PORTAGES_SNAPSHOT_ID}"
+            echo "PORTAGES_SNAPSHOT_ID inferred to ${PORTAGES_SNAPSHOT_ID}"
             test ${PORTAGES_SNAPSHOT_ID}  # `1' error code if empty
         fi
         if [ ! -e gentoo-portages.xz.sqfs ] ; then
             # Download compressed squashfs, check hashsum
-            fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/gentoo-${PORTAGES_SNAPSHOT_ID:=current}.xz.sqfs
+            fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs
             grep gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs ./sha512sum.txt | sha512sum -c
             ln -fs gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
         else
@@ -49,7 +49,7 @@ checkoutScript: |
 buildScript: |
     if selinux_check ; then
         # no repack needed, just make a symlink
-        ln -fs $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
+        ln -fs $1/gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
     else
         if [ ! -e gentoo-portages.xz.sqfs ] ; then
             echo "SELinux detected. Repacking squashfs image for SELinux with svirt_sandbox_file_t xattr."
@@ -59,7 +59,7 @@ buildScript: |
             # change SELinux attributes of unpacked files
             chcon -R -t svirt_sandbox_file_t portages.tmp
             # pack the stuff back
-            mksquashfs ./portages.tmp gentoo-portages.xz.sqfs \
+            mksquashfs ./portages.tmp gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs \
                 -xattrs -comp xz -force-uid 250 -force-gid 250
         else
             echo "gentoo-portages.xz.sqfs exists, omitting repack of squashfs on SELinux"
@@ -70,8 +70,4 @@ buildScript: |
 # (named `gentoo-portages.xz.sqfs').
 packageScript: |
     ln -fs $1/gentoo-portages.xz.sqfs gentoo-portages.xz.sqfs
-    export PORTAGES_SNAPSHOT_ID=some
-
-provideVars:
-    GENTOO_PORTAGES_SNAPSHOT_ID: "$PORTAGES_SNAPSHOT_ID"
 
