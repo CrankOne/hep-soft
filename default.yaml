@@ -39,7 +39,7 @@ environment:
     # The default desktop profile is pretty bare and we do further customize it
     # with make.conf. Leave empty to use default profile shipped with
     # binfarm-base.
-    GENTOO_PROFILE: default/linux/amd64/17.1
+    GENTOO_PROFILE: '16'  # default/linux/amd64/17.1
 
     # Docker exec (todo: wrap as tool?)
     #DOCKER: sudo /usr/bin/docker

@@ -1,10 +1,7 @@
 # NOTE: needs cURL, sed, basename, docker, ln, readlink
 root: true  #< XXX
 
-inherit: [in-docker, fetch]
-
-depends:
-    - gentoo-portages
+inherit: [gentoo-build, fetch]
 
 # Obtains stage3 Gentoo archive: latest, or referred with GENTOO_STG3_TAG
 # config var. Saves it in `src/' and creates symlink `stage3.tar.xz' referring
@@ -62,10 +59,13 @@ checkoutScript: |
 buildVars:
     - GENTOO_ARCH
     - GENTOO_STG3_TAG
+    - BINFARM_BUILD_TYPE
+    - GENTOO_PROFILE
 
 buildScript: |
     # Deduce the mount options with optional SELinux workaround
     MOUNTOPTS=$([[ selinux_check ]] && echo z || echo rw)
+
     # Retrieve the stage3 filename based on currently active symlink
     ln -fs $1/stage3.tar.xz stage3.tar.xz
     GENTOO_STG3_ARCHIVE=$(readlink -f stage3.tar.xz)
@@ -75,21 +75,26 @@ buildScript: |
         ( >&2 echo "Unable to obtain stage3 tag." )
         exit 1
     fi
+
     # Create new Docker container from scratch exploiting fetched stage3
     # archive.
     if [ ! -e stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar ] ; then
         unxz < $1/stage3.tar.xz > stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar
     fi
-    IMGSLINE=$($DOCKER_CMD images gentoo-hep-base)
+    IMAGE_NAME=gentoo-stage3-${GENTOO_ARCH}
+    IMGSLINE=$($DOCKER_CMD images ${IMAGE_NAME})
+
     # Create the image if it does not exist
     if ! echo "${IMGSLINE}" | grep ${GENTOO_STG3_TAG} ; then
         # No image available -- import from archive
-        $DOCKER_CMD import stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar "gentoo-hep-base:${GENTOO_STG3_TAG}"
+        echo "Docker import: stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar -> ${IMAGE_NAME}:${GENTOO_STG3_TAG}"
+        $DOCKER_CMD import stage3-${GENTOO_ARCH}-${GENTOO_STG3_TAG}.tar "${IMAGE_NAME}:${GENTOO_STG3_TAG}"
         # line to unpack image (deprecated):
         #   tar xpvf stage3-*.tar.bz2 --xattrs-include='*.*' --numeric-owner
-        IMGSLINE=$($DOCKER_CMD images gentoo-hep-base)
+        IMGSLINE=$($DOCKER_CMD images ${IMAGE_NAME})
     fi
     IMGSLINE=$(echo "${IMGSLINE}" | grep ${GENTOO_STG3_TAG})
+
     # Read the image identifiers for subsequent usage
     read BINFARM_IMG_REPO \
          BINFARM_IMG_TAG \
@@ -97,35 +102,56 @@ buildScript: |
             <<<$(echo $IMGSLINE | awk '{print $1,$2,$3}')
     if [ -z "${BINFARM_IMG_ID}" ] ; then
         (>&2 echo "Unable to find out the docker image ID.")
+    else
+        echo "Found ID of \"${IMAGE_NAME}\" image: ${BINFARM_IMG_ID}."
     fi
-    # Run the container on bare image and quickpg all the default stuff for
-    # backup with all it's configs:
-    mkdir -p ./portages.${BINFARM_IMG_TAG}
-    if [ ! "$(ls -A ./portages.${BINFARM_IMG_TAG})" ] ; then  # dir is empty
-        unsquashfs -d ./portages.${BINFARM_IMG_TAG} \
-               -no-xattrs \
-               -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs
-    fi
-    # NOTE 08.11.019:
-    #   /usr/portage changed to /var/db/repos/gentoo
-    #   /usr/portage/distfiles to /var/cache/distfiles
-    #   /usr/portage/packages to /var/cache/binpkgs
-    # for recent snapshots
-    mkdir -p pkgs.${BINFARM_IMG_TAG}
+
+    # put assets for container execution
+    mkdir -p pkgs.${BINFARM_IMG_TAG} \
+             portages.${PORTAGES_SNAPSHOT_ID} \
+             configs
+    case ${BINFARM_BUILD_TYPE} in
+        'dbg')
+            echo 'FEATURES="nostrip buildpkg"' > configs/make.conf
+            ;;
+        'opt')
+            echo 'FEATURES="buildpkg"' > configs/make.conf
+            ;;
+        *)
+            (>&2 echo "The BINFARM_BUILD_TYPE=\"${BINFARM_BUILD_TYPE}\" is not supported.")
+            ;;
+    esac
+    cat $<<gentoo-binfarm/make.conf.common>> >> configs/make.conf
+    case ${BINFARM_BUILD_TYPE} in
+        'dbg')
+            echo 'USE="debug sqlite"' >> configs/make.conf
+            ;;
+        'opt')
+            echo 'USE="sqlite"' >> configs/make.conf
+            ;;
+    esac
+    cp -f $<<gentoo-binfarm/init-binfarm.sh>> configs/init-binfarm.sh
+
+    # Rebuild the base stage3 with applied configs
+    mount_sqfs_portages ./portages.${PORTAGES_SNAPSHOT_ID}
+    # NOTE: the portages mountpoint (squashfs) is marked here as `ro' instead
+    # of optional `z' as for SELinux' setenfoce=1 `z' option weirdly does not
+    # permit read access to the mountpoint from within a running container.
     $DOCKER_CMD run --rm \
-        --volume $(readlink -f ./portages.${BINFARM_IMG_TAG}):/var/db/repos/gentoo:${MOUNTOPTS} \
+        --volume $(readlink -f ./portages.${PORTAGES_SNAPSHOT_ID}):/var/db/repos/gentoo:ro \
         --volume $(readlink -f ./pkgs.${BINFARM_IMG_TAG}):/var/cache/binpkgs:${MOUNTOPTS} \
+        --volume $(readlink -f ./configs):/opt/binfarm.in:${MOUNTOPTS} \
+        --workdir /opt/binfarm.in \
         ${BINFARM_IMG_ID} \
-        /bin/sh -c 'emerge sys-fs/squashfs-tools \
-                 && quickpkg --include-config=y "*/*" \
-                 && rm -rf /usr/portage/distfiles \
-                 && chmod -R a+rwx /var/cache/binpkgs'
-    ln -sf pkgs.${BINFARM_IMG_TAG} pkgs
+        /bin/sh /opt/binfarm.in/init-binfarm.sh ${BINFARM_BUILD_TYPE} ${GENTOO_PROFILE}
+    #umount_sqfs_portages ./portages.${PORTAGES_SNAPSHOT_ID}
+    #ln -sf pkgs.${BINFARM_IMG_TAG} pkgs
 
 packageVars:
     - GENTOO_ARCH
     - GENTOO_STG3_TAG
 
 packageScript: |
-    ln -sf $1/pkgs pkgs
+    rm -rf pkgs
+    cp -rf $1/pkgs pkgs
 

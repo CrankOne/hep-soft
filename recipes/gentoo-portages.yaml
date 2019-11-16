@@ -10,9 +10,8 @@ checkoutVars:
 # Downloads the portages snapshot identified by `PORTAGES_SNAPSHOT_ID'
 # variable and saves it to `gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs' with
 # symlink named `gentoo-portages.xz.sqfs'. Performs checksum test.
-# TODO: use `FUSERUMOUNT_CMD' instead of direct `fusermount'
 checkoutScript: |
-    if which fusermount ; then
+    if which $(echo $FUSERUMOUNT_CMD | awk '{print $1}') ; then
         # Update the checksums file
         fetch_file ${PORTAGES_SNAPSHOT_MIRROR:-"http://distfiles.gentoo.org"}/snapshots/squashfs/sha512sum.txt
         # If $PORTAGES_SNAPSHOT_ID is not set, try to figure it out
@@ -47,11 +46,11 @@ checkoutScript: |
 # Forwards portages snapshot symlink via the `build/' dir. For SELinux re-packs
 # the image with `svirt_sandbox_file_t' xattr.
 buildScript: |
+    PORTAGES_SNAPSHOT_ID=$(readlink -f $1/gentoo-portages.xz.sqfs | sed -E 's/.*gentoo-([[:digit:]]+).xz.sqfs/\1/g')
     if selinux_check ; then
-        # no repack needed, just make a symlink
         ln -fs $1/gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
     else
-        if [ ! -e gentoo-portages.xz.sqfs ] ; then
+        if [ ! -e gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs ] ; then
             echo "SELinux detected. Repacking squashfs image for SELinux with svirt_sandbox_file_t xattr."
             # temporary storage for unpacked portages
             mkdir -p portages.tmp
@@ -62,9 +61,10 @@ buildScript: |
             mksquashfs ./portages.tmp gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs \
                 -xattrs -comp xz -force-uid 250 -force-gid 250
         else
-            echo "gentoo-portages.xz.sqfs exists, omitting repack of squashfs on SELinux"
+            echo "gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs exists, omitting repack of squashfs on SELinux"
         fi
     fi
+    ln -fs gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
 
 # Forwards portages snapshot squashfs symlink via the `dist/' dir
 # (named `gentoo-portages.xz.sqfs').

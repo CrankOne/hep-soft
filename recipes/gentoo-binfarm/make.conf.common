@@ -1,9 +1,3 @@
-# "nostrip" -- will provide the names of symbols in all the ELF object files.
-#       As a drawback, the size of binaries may become dramatically bigger.
-# "buildpkg" -- makes binary package each time emerge finishes building new
-#       package.
-FEATURES="nostrip buildpkg"
-
 COMMON_FLAGS="-O2 -pipe"
 CFLAGS="${COMMON_FLAGS}"
 CXXFLAGS="${COMMON_FLAGS}"
@@ -21,5 +15,3 @@ LC_MESSAGES=C
 
 PYTHON_SINGLE_TARGET="python3_6"
 PYTHON_TARGETS="python2_7 python3_6"
-
-USE="debug sqlite"
