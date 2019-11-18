@@ -7,15 +7,18 @@
 # to use.
 # Assumes to be ran from within the directory with `make.conf' file.
 
+set -e
+
 # Make base system-wide build assets
 mkdir -p /etc/portage/env/
 if [ "dbg" == $1 ] ; then
     echo 'CFLAGS="${CFLAGS} -ggdb"' > /etc/portage/env/debugsyms \
     echo 'CXXFLAGS="${CXXFLAGS} -ggdb"' >> /etc/portage/env/debugsyms \
     echo 'FEATURES="${FEATURES} splitdebug compressdebug -nostrip"' >> /etc/portage/env/debugsyms \
-    echo 'USE="debug"' >> /etc/portage/env/debugsyms \
+    echo 'USE="debug"' >> /etc/portage/env/debugsyms
     echo 'FEATURES="${FEATURES} installsources"' > /etc/portage/env/installsources
 fi
+
 cp make.conf /etc/portage/make.conf
 
 # Set profile, if given
@@ -29,7 +32,6 @@ emerge sys-fs/squashfs-tools \
        app-portage/gentoolkit \
        dev-util/debugedit \
        sys-devel/gdb \
-       sci-physics/cernlib-2006-r5 \
        app-admin/sudo
 
 # Forcefully generate all packages

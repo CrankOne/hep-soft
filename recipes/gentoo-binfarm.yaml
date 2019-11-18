@@ -132,26 +132,47 @@ buildScript: |
     esac
     cp -f $<<gentoo-binfarm/init-binfarm.sh>> configs/init-binfarm.sh
 
+    BINFARM_CONTAINER_NAME="gentoo_binfarm_${BINFARM_BUILD_TYPE}_${GENTOO_PROFILE}_${GENTOO_STG3_TAG}"
+    if $DOCKER_CMD container ls -a | grep ${BINFARM_CONTAINER_NAME} ; then
+        echo "Removing existing container ${BINFARM_CONTAINER_NAME}..."
+        $DOCKER_CMD container rm ${BINFARM_CONTAINER_NAME}
+    fi
+
     # Rebuild the base stage3 with applied configs
     mount_sqfs_portages ./portages.${PORTAGES_SNAPSHOT_ID}
     # NOTE: the portages mountpoint (squashfs) is marked here as `ro' instead
     # of optional `z' as for SELinux' setenfoce=1 `z' option weirdly does not
     # permit read access to the mountpoint from within a running container.
-    $DOCKER_CMD run --rm \
+    $DOCKER_CMD run --name ${BINFARM_CONTAINER_NAME} \
+        --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
         --volume $(readlink -f ./portages.${PORTAGES_SNAPSHOT_ID}):/var/db/repos/gentoo:ro \
         --volume $(readlink -f ./pkgs.${BINFARM_IMG_TAG}):/var/cache/binpkgs:${MOUNTOPTS} \
         --volume $(readlink -f ./configs):/opt/binfarm.in:${MOUNTOPTS} \
+        --tmpfs /var/tmp/portage:exec \
         --workdir /opt/binfarm.in \
         ${BINFARM_IMG_ID} \
         /bin/sh /opt/binfarm.in/init-binfarm.sh ${BINFARM_BUILD_TYPE} ${GENTOO_PROFILE}
-    #umount_sqfs_portages ./portages.${PORTAGES_SNAPSHOT_ID}
-    #ln -sf pkgs.${BINFARM_IMG_TAG} pkgs
+    umount_sqfs_portages ./portages.${PORTAGES_SNAPSHOT_ID}
+    ln -sf ./pkgs.${BINFARM_IMG_TAG} pkgs
+    # Commit container to image
+    if ! $DOCKER_CMD container ls -a | grep ${BINFARM_CONTAINER_NAME} ; then
+        (>&2 echo "Couldn't find container ${BINFARM_CONTAINER_NAME}.")
+        exit 1
+    fi
+    CONTAINER_ID=$($DOCKER_CMD container ls -a | grep ${BINFARM_CONTAINER_NAME} | awk '{print $1}')
+    $DOCKER_CMD commit --change 'CMD ["/bin/false"]' ${CONTAINER_ID} gentoo-binfarm:latest
+    $DOCKER_CMD container rm ${CONTAINER_ID}
 
 packageVars:
     - GENTOO_ARCH
     - GENTOO_STG3_TAG
+    - DOCKER_CMD
 
+# TODO: forward BINFARM_IMG_TAG, PORTAGES_SNAPSHOT_ID
 packageScript: |
+    IMAGE_ARCHIVE_NAME=gentoo-binfarm-${BINFARM_IMG_TAG}-${PORTAGES_SNAPSHOT_ID}.tar
+    ${DOCKER_CMD} save gentoo-binfarm:latest | gzip > ${IMAGE_ARCHIVE_NAME}.gz
+    ln -fs ${IMAGE_ARCHIVE_NAME}.gz gentoo-binfarm-latest.tar.gz
     rm -rf pkgs
     cp -rf $1/pkgs pkgs
 
