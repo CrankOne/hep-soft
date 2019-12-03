@@ -43,6 +43,9 @@ environment:
     # 17 -- default/linux/amd64/17.1/selinux
     GENTOO_PROFILE: '16'
 
+    # Override this to make the release versions of the container
+    BINFARM_IMAGE_VERSION: "0.0"
+
     # Docker exec (todo: wrap as tool?)
     #DOCKER: sudo /usr/bin/docker
     # XXX, deprecated:
