@@ -17,12 +17,31 @@ can be constructed from base image and bundle of binary packages in reasonable
 time. However, making the base layer (_binfarm_) we still leave as much of
 customization opportunities as original Gentoo distirbution can offer.
 
+One may think of the `binfarm-hep` as if it is a classic binary-package-based
+repo (RHEL, Debian) of certain version, but driven by `emerge` instead of
+`yum`/`dnf`/`apt`. Benefits:
+
+* Some set of pre-built packages is available to speed-up the initial
+deployment; one can easily customize and deploy bootstrapping distro image
+for specific needs together with own overlays/binary package repositories.
+* From-source builds are available as well, by the elaborated means of portage
+EAPI.
+
+Drawbacks:
+
+* To customize the images one need to know basics of Gentoo system
+administration
+* To establish own souce code overlays with their own ebuilds one have to
+be familiar with Portage's ebuilds.
+
 # Subject area: software environment for HEP
 
 The purpose of this repository is to provide robust and modern environment for
 analysis and simulation task of High-Energy Physics (HEP). It is quite common
 effort (see, e.g. [FairSoft](https://github.com/FairRootGroup/FairSoft)),
 however we are aiming a slightly different priorities.
+
+## Rationale
 
 This bundle is built on top of Gentoo Linux distributive providing following
 benefits:
@@ -82,7 +101,7 @@ Tool usually uses current directory extensively:
 Note: you probably would like to re-login to restore your primary group after
 `newgrp` that switches your current primary group.
 
-# Deploying the Tools
+## Deploying the Tools
 
 Preferred method of usage is Python3 virtual environment with `BobBuildtool`
 being installed within. Cheatsheet:
@@ -99,15 +118,58 @@ consider either to move the project directory to some reachable location, or
 check directory-browsing privileges to some of the parent directories (e.g.,
 `/home/user` dir sometimes protected from browsing by members of group `user`).
 
+<<<<<<< HEAD
 ## Building the Base Image
+=======
+## Images Hierarchy
+
+Although the Gentoo community maintains Docker image for their `stage3` archive
+[being built automatically](https://github.com/gentoo/gentoo-docker-images),
+we do need an additional layer over the `stage3` with some kludge to circumvent
+native Dockerfile restrictions (`SYS_PTRACE`, extended SELinux attributes, etc).
+Also, the portages snapshot on the docker volume was noticed to introduce a
+significant performance drop on some systems (see notes section of this readme).
+
+To implement this we introduce the `gentoo-binfarm` image is derived from
+Gentoo's stage3 tarball with some minor system-wide customization applied.
+This is a base layer to build the concrete experiment's images
+with `Dockerfile`.
+
+             +----------------------+
+             |    gentoo-binfarm    |
+             | (made by Bob recipe) |
+             +----------------------+
+                        ^
+                        |
+                 +-------------+
+                 | binfarm-hep |
+                 | (made with  |  >--- builds packages for --->  +----------+
+                 | Dockerfile) |                                 |  Binary  |
+                 +-------------+                                 | packages |
+                   ^    ^    ^                                   |   repo   |
+                   |    |    |    <- retrieves packages from -<  +----------+
+        +---+ +---+  ...    ...  +--------+
+        | Particular experiment's images  |
+        |     (made with Dockerfile,      |
+        |   singularity, shifter, direct  |
+        |            commits, etc.)       |
+        +---+ +---+  ...    ...  +--------+
+
+where:
+
+1. `gentoo-binfarm` is a bootrstrap image for subsequent builds.
+2. `binfarm-hep` is a customized image producing the binary packages. Defines
+set of use flags for all the pre-built packages located on public repo.
+
+Most recent `gentoo-binfarm` image is usually
+[available at dockerhub](https://hub.docker.com/r/crankone/hepfarm). Recipes at
+this repo is used to generate these images.
+
+## Building the Base Image and Parameters
 
 Base "binary farm" image may be then built by:
 
     $ bob dev gentoo-binfarm
-
-Note, that one might have to provide the `-DDOCKER_CMD='sudo docker'` argument
-to `bob dev` invokation above to handle the environment where user has no
-direct permission to `docker` group.
 
 In case when no `GENTOO_STG3_TAG` is provided, the latest one will be taken
 from current `GENTOO_DISTFILES_MIRROR`. In this case, among the other `bob`

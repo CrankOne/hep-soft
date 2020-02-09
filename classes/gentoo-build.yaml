@@ -64,6 +64,7 @@ buildScript: |
             else
                 (>&2 echo "Cleanup warning: $1 not mounted.")
             fi
+            trap - EXIT
         else
             (>&2 echo "Cleanup warning: is $1 not a dir.")
         fi
