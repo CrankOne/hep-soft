@@ -48,7 +48,8 @@ checkoutScript: |
 buildScript: |
     PORTAGES_SNAPSHOT_ID=$(readlink -f $1/gentoo-portages.xz.sqfs | sed -E 's/.*gentoo-([[:digit:]]+).xz.sqfs/\1/g')
     if selinux_check ; then
-        ln -fs $1/gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.xz.sqfs
+        (>&2 echo "Got ya!" )
+        ln -fs $1/gentoo-${PORTAGES_SNAPSHOT_ID}.xz.sqfs gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs
     else
         if [ ! -e gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs ] ; then
             echo "SELinux detected. Repacking squashfs image for SELinux with svirt_sandbox_file_t xattr."
@@ -56,7 +57,7 @@ buildScript: |
             mkdir -p portages.tmp
             unsquashfs -d portages.tmp -f $1/gentoo-portages.xz.sqfs
             # change SELinux attributes of unpacked files
-            chcon -R -t svirt_sandbox_file_t portages.tmp
+            #chcon -R -t svirt_sandbox_file_t portages.tmp
             # pack the stuff back
             mksquashfs ./portages.tmp gentoo-portages.${PORTAGES_SNAPSHOT_ID}.xz.sqfs \
                 -xattrs -comp xz -force-uid 250 -force-gid 250

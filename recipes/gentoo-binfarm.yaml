@@ -63,6 +63,13 @@ buildVars:
     - GENTOO_PROFILE
 
 buildScript: |
+    if [ -z "${PORTAGES_SNAPSHOT_ID}" ] ; then
+        (>&2 echo "Failed to deduce the PORTAGES_SNAPSHOT_ID.")
+        exit 1
+    else
+        (>&2 echo "PORTAGES_SNAPSHOT_ID=${PORTAGES_SNAPSHOT_ID}")
+    fi
+
     # Deduce the mount options with optional SELinux workaround
     MOUNTOPTS=$([[ selinux_check ]] && echo z || echo rw)
 
@@ -145,7 +152,7 @@ buildScript: |
         ${BINFARM_IMG_ID} \
         /bin/sh /opt/binfarm.in/init-binfarm.sh ${BINFARM_BUILD_TYPE} ${GENTOO_PROFILE}
     #umount_sqfs_portages ./portages.${PORTAGES_SNAPSHOT_ID}
-    #ln -sf pkgs.${BINFARM_IMG_TAG} pkgs
+    ln -sf pkgs.${BINFARM_IMG_TAG} pkgs
 
 packageVars:
     - GENTOO_ARCH

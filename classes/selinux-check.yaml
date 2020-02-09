@@ -1,8 +1,7 @@
 buildScript: |
     selinux_check() {
-        ENFORCEVAL=$(getenforce)
+        ENFORCEVAL=$(getenforce 2> /dev/null)
         if [ $? -ne 0 ] ; then
-            # ok, we're not in SELinux
             return 0
         fi
         return 1
@@ -10,9 +9,8 @@ buildScript: |
 
 packageScript: |
     selinux_check() {
-        ENFORCEVAL=$(getenforce)
+        ENFORCEVAL=$(getenforce 2> /dev/null)
         if [ $? -ne 0 ] ; then
-            # ok, we're not in SELinux
             return 0
         fi
         return 1

@@ -22,10 +22,12 @@ buildTools: [docker]
 buildScript: |
     # Get the portages snapshot ID
     PORTAGES_SNAPSHOT_ID=$( readlink -f ${BOB_DEP_PATHS[gentoo-portages]}/gentoo-portages.xz.sqfs \
-                          | sed -E 's/.*gentoo-portages\.([[:digit:]]+).xz.sqfs/\1/g' )
+    | sed -nE 's/.*gentoo-[^[:digit:]]*([[:digit:]]+).xz.sqfs/\1/p' )
     if [ -z "${PORTAGES_SNAPSHOT_ID}" ] ; then
         (>&2 echo "Failed to deduce the PORTAGES_SNAPSHOT_ID.")
         exit 1
+    else
+        echo "PORTAGES_SNAPSHOT_ID=${PORTAGES_SNAPSHOT_ID} (deduced)"
     fi
     #
     # Squashfs portages
