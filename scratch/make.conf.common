@@ -4,6 +4,14 @@ CXXFLAGS="${COMMON_FLAGS}"
 FCFLAGS="${COMMON_FLAGS}"
 FFLAGS="${COMMON_FLAGS}"
 
+CHOST="x86_64-pc-linux-gnu"
+ACCEPT_KEYWORDS="amd64"
+LANGUAGE="en"
+LINGUAS="en"
+ABI_X86="64 32"
+CPU_FLAGS_X86="mmx sse sse2"
+ACCEPT_LICENSE="skype-eula cadsoft LOKI-EULA NVIDIA-CUDA"
+
 # NOTE: deprecated in favor of `location' attribute of /etc/portage/repos.conf.
 PORTDIR="/var/db/repos/gentoo"
 # defines the location where Portage will store the downloaded source code archives
@@ -15,3 +23,7 @@ LC_MESSAGES=C
 
 PYTHON_SINGLE_TARGET="python3_6"
 PYTHON_TARGETS="python2_7 python3_6"
+
+USE="32bit 64bit bindist X alsa c++0x cairo compat consolekit ctypes-python \
+     dhcp encode fltk gnuplot gzip nls opengl png python python3 sdl svg \
+     threads tiff tk truetype udev unicode unit-mm xorg -systemd"
