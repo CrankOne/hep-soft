@@ -1,0 +1,6 @@
+# required by sci-physics/root-6.12.06-r11::gentoo[asimage]
+# required by sci-physics/root (argument)
+>=media-libs/libafterimage-1.20-r3 jpeg tiff gif png
+# required by sci-physics/root-6.12.06-r11::gentoo[qt5,X]
+# required by sci-physics/root (argument)
+>=dev-qt/qtwebengine-5.13.2 widgets

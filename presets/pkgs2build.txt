@@ -1,0 +1,40 @@
+# List here the Gentoo packages to be built in binary form.
+# Lines starting with `#' will be ignored.
+# Each package entry has to match the Gentoo Portage package atom.
+
+# These are the main purpose packages for the entire bundle (HEP)
+sci-physics/geant
+sci-physics/root
+sci-visualization/gnuplot
+
+# Development tools
+dev-util/strace
+net-analyzer/nmap
+dev-util/valgrind
+sys-devel/gdb
+sys-devel/clang
+dev-lang/swig:0
+
+# Auxiliary development, libraries
+dev-libs/capnproto
+dev-libs/protobuf
+dev-libs/xerces-c
+dev-cpp/yaml-cpp
+dev-cpp/ctemplate
+
+# Python ecosystem
+dev-python/virtualenv
+dev-python/pip
+dev-python/celery
+dev-python/flask
+www-servers/gunicorn
+www-servers/lighttpd
+
+# Databases
+dev-db/postgresql
+dev-db/mysql
+dev-db/mysql++
+
+# Frontend
+net-libs/nodejs
+

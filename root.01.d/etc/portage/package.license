@@ -1,0 +1,4 @@
+sci-physics/geant geant4
+sci-physics/geant-data geant4
+app-doc/geant-docs geant4
+sci-physics/root MSttfEULA freedist

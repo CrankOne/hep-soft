@@ -7,6 +7,7 @@ dev-cpp/yaml-cpp
 dev-db/redis
 dev-lang/swig:0
 dev-libs/boost
+dev-libs/capnproto
 dev-libs/gobject-introspection
 dev-libs/protobuf
 dev-libs/xerces-c

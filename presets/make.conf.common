@@ -1,3 +1,11 @@
+# For relevant discussion see: https://bugs.gentoo.org/680456
+# - this is due to the in-docker run:
+FEATURES="-ipc-sandbox -mount-sandbox -network-sandbox -pid-sandbox"
+# - this is due to unpriveleged run:
+FEATURES="${FEATURES} -sandbox -usersandbox"
+
+MAKEOPTS="-j15"  # TODO
+
 COMMON_FLAGS="-O2 -pipe"
 CFLAGS="${COMMON_FLAGS}"
 CXXFLAGS="${COMMON_FLAGS}"
@@ -9,8 +17,10 @@ ACCEPT_KEYWORDS="amd64"
 LANGUAGE="en"
 LINGUAS="en"
 ABI_X86="64 32"
-CPU_FLAGS_X86="mmx sse sse2"
-ACCEPT_LICENSE="skype-eula cadsoft LOKI-EULA NVIDIA-CUDA"
+# NOTE: it is doubtful to enable mmxext feature as it does not seem to be a
+# frequent one for x86 architecture, but ffmpeg requires it if sse2 is enabled
+# unconditionally.
+CPU_FLAGS_X86="mmx sse sse2 mmxext"
 
 # NOTE: deprecated in favor of `location' attribute of /etc/portage/repos.conf.
 PORTDIR="/var/db/repos/gentoo"
@@ -24,6 +34,5 @@ LC_MESSAGES=C
 PYTHON_SINGLE_TARGET="python3_6"
 PYTHON_TARGETS="python2_7 python3_6"
 
-USE="32bit 64bit bindist X alsa c++0x cairo compat consolekit ctypes-python \
-     dhcp encode fltk gnuplot gzip nls opengl png python python3 sdl svg \
-     threads tiff tk truetype udev unicode unit-mm xorg -systemd"
+USE="sqlite"
+# vim: set ft=make.conf

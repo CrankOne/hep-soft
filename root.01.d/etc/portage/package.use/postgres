@@ -1,0 +1,1 @@
+dev-db/postgresql nls pam readline server ssl zlib kerberos ldap -libressl llvm perl python -tcl threads uuid xml
