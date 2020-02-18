@@ -140,6 +140,33 @@ where:
 set of use flags for all the pre-built packages located on public repo. It is
 not supposed to be published on any registry.
 
+## Makefile variables
+
+All these variables have their default values set in Makefile. One may override
+them by editing the Makefile or by providing them in command line during `make`
+invokation.
+
+* `PORTAGE_TAG` should contain particular portage timestamp tag
+(like `20200214`). To see list of available tags, visit
+[portages image page](https://hub.docker.com/r/gentoo/portage/tags) on dockerhub.
+* `PLATFORM` must correspond to one of the Gentoo's available platforms, like
+`x86`, `x86-hardened`, `amd64`, `amd64-nomultilib`, `amd64-hardened`, or
+`amd64-hardened-nomultilib` (see images on [dockerhub page](https://hub.docker.com/u/gentoo)).
+* `STAGE3_TAG` should contain particular `stage3` timestamp tag
+(like `20200214`). To see list of available tags, visit corresponding
+`stage3` image page (e.g. [for amd64](https://hub.docker.com/r/gentoo/stage3-amd64/tags).
+* `BINFARM_TYPE` refers to one of dynamically-composed build configurations.
+Currently only `opt` and `dbg` are supported for optimized and debug versions
+of the binary farm environment. This presets has to be properly understood by
+`root.??.d/init-binfarm.sh` script(s) in order to customize some additional
+compile-time features and portages configs.
+* `BINFARM_PROFILE` should be one of the points available by
+`eselect profile list`. For detailed explaination of Gentoo profile, see
+relevant [Gentoo wiki page](https://wiki.gentoo.org/wiki/Profile_(Portage)).
+
+The `BINFARM_TYPE` variable may be further superseded by custom portage
+profile.
+
 ## Building the Base Image and Parameters
 
 Base "binary farm" image may be then built by:

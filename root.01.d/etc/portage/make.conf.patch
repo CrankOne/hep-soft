@@ -1,0 +1,9 @@
+--- /etc/portage/make.conf	2020-02-17 14:40:26.236213836 +0700
++++ /etc/portage/make.conf	2020-02-18 20:09:44.636071931 +0700
+@@ -35,4 +35,6 @@
+ PYTHON_TARGETS="python2_7 python3_6"
+ 
+ USE="sqlite"
++
++PORTAGE_BINHOST="http://hep-soft.crank.qcrypt.org/20200214-opt/"
+ # vim: set ft=make.conf

@@ -1,28 +1,37 @@
 # This makefile prepares the archives with configuration files for further
 # deployment on the container environment
 
+# TODO: new task for dockerfile init scripts:
+# 	$ find /etc/portage -type f -name *.binfarm@patch -print0 | sort -z | xargs -t -0 -n 1 patch -p0 -i
+
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/portage/tags
 PORTAGE_TAG=20200214
 # Possible choices are: x86, x86-hardened, amd64, amd64-nomultilib,
-# amd64-hardened, amd64-hardened-nomultilib
-# See: https://hub.docker.com/u/gentoo
+# amd64-hardened, amd64-hardened-nomultilib. See:
+# 	https://hub.docker.com/u/gentoo
 PLATFORM=amd64
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/stage3-amd64/tags
 STAGE3_TAG=20200214
 # Possible choices are: opt, dbg
 BINFARM_TYPE=opt
+# Gentoo profile to set
 BINFARM_PROFILE=default/linux/amd64/17.1
+
+# Remote location with binary packages
+PORTAGE_BINHOST="http://hep-soft.crank.qcrypt.org/$(PORTAGE_TAG)-$(BINFARM_TYPE)/"
 
 # Docker command to use. By default expects user named `collector' to exist
 # in the system.
 DOCKER=sudo -u collector docker
-
 # Options for creating an archive of root filesystem additions.
 ARCHIVE_OPTS=--exclude=.keep --exclude=*.sw?
 
 all: base-packages.$(BINFARM_TYPE).$(PORTAGE_TAG).tar
+
+# virtual target -- alias for base binfarm image
+binfarm-image: binfarm-image.$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 
 # TODO: make archive from dir?
 packages.$(BINFARM_TYPE).$(PORTAGE_TAG).tar: binfarm-image.$(BINFARM_TYPE).$(PORTAGE_TAG).txt hepfarm-pkgs-set.txt
