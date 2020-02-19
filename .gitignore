@@ -21,7 +21,7 @@ tags
 .settings
 .dat
 # common generated
-context.??.d/root.d.tar.gz
+context.??.d/root.d.tar
 *-image.*.txt
 # particular generated
 root.00.d/etc/portage/make.conf

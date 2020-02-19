@@ -1,6 +1,5 @@
 ARG BASE_IMG
 FROM $BASE_IMG
 
-ADD root.d.tar.gz /
-
-RUN sudo emerge @hepfarm
+ADD root.d.tar /
+RUN /bin/bash /opt/hepfarm/bin/apply-patches.sh

@@ -1,9 +1,6 @@
 # This makefile prepares the archives with configuration files for further
 # deployment on the container environment
 
-# TODO: new task for dockerfile init scripts:
-# 	$ find /etc/portage -type f -name *.binfarm@patch -print0 | sort -z | xargs -t -0 -n 1 patch -p0 -i
-
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/portage/tags
 PORTAGE_TAG=20200214
@@ -18,9 +15,6 @@ STAGE3_TAG=20200214
 BINFARM_TYPE=opt
 # Gentoo profile to set
 BINFARM_PROFILE=default/linux/amd64/17.1
-
-# Remote location with binary packages
-PORTAGE_BINHOST="http://hep-soft.crank.qcrypt.org/$(PORTAGE_TAG)-$(BINFARM_TYPE)/"
 
 # Docker command to use. By default expects user named `collector' to exist
 # in the system.
@@ -41,13 +35,13 @@ packages.$(BINFARM_TYPE).$(PORTAGE_TAG).tar: binfarm-image.$(BINFARM_TYPE).$(POR
 		$(shell cat $<) \
 		/vin/bash -c 'sudo emerge @hepfarm; sudo quickpkg --include-config=y "*/*"'
 
-hepfarm-image.$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.01.d/root.d.tar.gz context.01.d/Dockerfile
+hepfarm-image.$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.01.d/root.d.tar context.01.d/Dockerfile
 	$(DOCKER) build -t hepfarm-$(BINFARM_TYPE):$(PORTAGE_TAG) \
 				--iidfile $@ \
 				--build-arg BASE_IMG=$(shell cat binfarm-image.$(BINFARM_TYPE).$(PORTAGE_TAG).txt) \
 		   		context.01.d
 
-binfarm-image.$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.00.d/root.d.tar.gz context.00.d/Dockerfile
+binfarm-image.$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.00.d/root.d.tar context.00.d/Dockerfile
 	$(DOCKER) build -t binfarm-base-$(BINFARM_TYPE):$(PORTAGE_TAG) \
 				--iidfile $@ \
 				--build-arg PORTAGE_TAG=$(PORTAGE_TAG) \
@@ -57,13 +51,18 @@ binfarm-image.$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.00.d/root.d.tar.gz con
 				--build-arg BINFARM_PROFILE=$(BINFARM_PROFILE) \
 		   		context.00.d
 
-context.00.d/root.d.tar.gz: $(shell find root.00.d -type f -print) \
-						  	root.00.d/etc/portage/make.conf
-	tar czvf $@ $(ARCHIVE_OPTS) -C root.00.d .
+context.01.d/root.d.tar: $(shell find root.01.d -type f -print) \
+							root.01.d/etc/portage/sets/hepfarm \
+	tar cvf $@ $(ARCHIVE_OPTS) -C root.01.d .
 
-context.01.d/root.d.tar.gz: $(shell find root.01.d -type f -print) \
-							root.01.d/etc/portage/sets/hepfarm
-	tar czvf $@ $(ARCHIVE_OPTS) -C root.01.d .
+#
+# Base layer (binfarm) context
+context.00.d/root.d.tar: $(shell find root.00.d -type f -print) \
+						  	root.00.d/etc/portage/make.conf \
+	# Create archive of static files
+	tar cvf $@ $(ARCHIVE_OPTS) -C root.00.d .
+
+#root.%.d/opt/binfarm/patches/patchlist.txt: contetxt:
 
 root.01.d/etc/portage/sets/hepfarm: presets/pkgs2build.txt
 	grep -v '^#' $< | sed '/^$$/d' | sort | uniq > $@
@@ -72,7 +71,10 @@ root.00.d/etc/portage/make.conf: presets/make.conf.common presets/make.conf.$(BI
 	cp $< $@
 	cat presets/make.conf.$(BINFARM_TYPE) >> $@
 
+#root.%.d/opt/hepfarm/etc/patches.txt:
+#	find root.%.d -type f -name '*.patch@binfarm' -print > $@
+
 clean:
-	rm -f context.*.d/root.d.tar.gz
+	rm -f context.*.d/root.d.tar
 
 .PHONY: all clean

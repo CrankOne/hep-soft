@@ -19,14 +19,16 @@ COPY --from=portage /var/db/repos/gentoo /var/db/repos/gentoo
 # Copy the binfarm-initialization archive
 #COPY make.conf.common /etc/portage/make.conf
 #COPY init-binfarm.sh init.sh
-ADD root.d.tar.gz /
+ADD root.d.tar /
 
 ARG BINFARM_TYPE=dbg
 ARG BINFARM_PROFILE=default/linux/amd64/17.1
 
-RUN /bin/sh init-binfarm.sh $BINFARM_TYPE $BINFARM_PROFILE
+RUN /bin/sh /opt/hepfarm/bin/init-binfarm.sh $BINFARM_TYPE $BINFARM_PROFILE
 VOLUME /var/cache/binpkgs
 # Set default user to collector (created by init-binfar,sh)
 USER collector:collector
 WORKDIR /var/src
 VOLUME /var/src
+
+RUN /bin/bash /opt/hepfarm/bin/apply-patches.sh

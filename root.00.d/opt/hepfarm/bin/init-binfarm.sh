@@ -46,9 +46,9 @@ locale-gen
 echo 'sys-libs/pam -filecaps' > /etc/portage/package.use/pam-workaround
 
 # Rebuild everything
-emerge -uDN @world
+emerge -guDN @world
 rm /etc/portage/package.use/pam-workaround
-emerge -uDN @world
+emerge -guDN @world
 emerge --depclean
 revdep-rebuild
 
