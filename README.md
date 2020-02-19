@@ -5,6 +5,13 @@ scientific groups in the creation of their own subject-specific Linux
 "micro-distirbution" in a way pretty close to LFS, but with means and benefits
 of Gentoo Portage system.
 
+## Status
+
+Although our scientific group currently using the images produced by these
+scripts, some settings/scenarios here are hardcoded (see TODO at the end of
+this note). So far it should be considered as a boilerplate by side user rather
+then a generic-purpose distro.
+
 ## Rationale
 
 The goal of this initiative is to gain customization freedom offered by Gentoo
@@ -111,34 +118,17 @@ This basic customization acts more like native Gentoo profile (and may turn to
 one in the future) and determines major traits of the build: debug information
 vs. optimization, static builds, no-multilib, etc.
 
-               +----------------+
-               |  binfarm-image |
-               |   (root.00.d)  |
-               +----------------+
-                        ^
-                        |
-                 +-------------+
-                 |   hepfarm   |
-                 | (root.01.d) |  >--- builds packages for --->  +----------+
-                 |  not saved  |                                 |  Binary  |
-                 +-------------+                                 | packages |
-                   ^    ^    ^                                   |   repo   |
-                   |    |    |    <- retrieves packages from -<  +----------+
-        +---+ +---+  ...    ...  +--------+
-        | Particular experiment's images  |
-        |     (made with Dockerfile,      |
-        |   singularity, shifter, direct  |
-        |            commits, etc.)       |
-        +---+ +---+  ...    ...  +--------+
-
-(TODO: incorrect, reflect interim layer b/w binfarm and hepfarm).
+![Hepfarm structure](/doc/hepfarm-struct.svg)
 
 where:
 
-1. `binfarm` is a bootrstrap image for subsequent builds.
-2. `hepfarm` is a customized image producing the binary packages. Defines
-set of use flags for all the pre-built packages located on public repo. It is
-not supposed to be published on any registry.
+1. _Binfarm_ is a bootrstrap image for subsequent builds.
+2. Subject images are base layers for containers producing the binary packages.
+Define use flags for pre-built packages located on public repo. It is not
+supposed to be published on any registry.
+3. Custom image may be then quickly assembled by user or uploaded to registry,
+just like in case of ordinary binary package-based distro... but with much more
+impressive customization possibilities!
 
 ## Makefile variables
 
@@ -171,9 +161,13 @@ profile.
 
 Base "binary farm" image may be then built by:
 
-    $ make binfarm-image.opt.20200214.txt
+    $ make binfarm-image
 
-... todo: more info to be added here
+Once image is built, you can start to write your own customization for subject
+image(s) by checking instructions right at the shell-sunning container.
+Currently, the "hepfarm" image is located in repo at `root.01.d/` and
+`context.01.d` for demonstration purpose -- it produces binary packages for
+our work in HEP.
 
 # Notes
 
@@ -183,4 +177,19 @@ environment is portages tree that produces extreme amount of tiny files that
 makes Docker containers run very slow. We do overcome this issue by holding
 the official portages tree on squashfs. Other things have to be noticed,
 however.
+
+# TODO
+
+1. Incorporate custom Gentoo profiles instead of bunch of this silly _bricolage_
+at `root.00.d/etc/portage/make.conf`: [how](https://wiki.gentoo.org/wiki/Profile_(Portage)#Creating\_custom\_profiles),
+use [repo](https://github.com/CrankOne/q-crypt-hep-overlay)).
+2. Note of TODO comments at the `presets/make.conf.common`: `MAKEOPTS` and
+`PORTAGE_BINHOST` must be manageable externally-specified variables. Currently
+they are hardcoded and exposes my tiny VPS.
+3. Think on some patching/config update mechanics with Portage's configs
+(`._cfg0000.make.conf`? ebuild at custom repo? utilize smth like
+`root.00.d/opt/binfarm/bin/apply-patches.sh` as the last resort). The dumb
+`echo` in `root.00.d/opt/init-binfarm.sh` must be superseded.
+4. Break the "hepfarm" into pieces for incremental builds: need finer subject
+structure: MC, analysis, serving, etc.
 
