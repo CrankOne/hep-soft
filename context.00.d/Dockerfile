@@ -31,4 +31,4 @@ USER collector:collector
 WORKDIR /var/src
 VOLUME /var/src
 
-RUN /bin/bash /opt/hepfarm/bin/apply-patches.sh
+#RUN /bin/bash /opt/hepfarm/bin/apply-patches.sh

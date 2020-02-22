@@ -22,7 +22,7 @@ tags
 .dat
 # common generated
 context.??.d/root.d.tar
-*-image.*.txt
+*farm-*.txt
 # particular generated
 root.00.d/etc/portage/make.conf
 root.01.d/etc/portage/sets/hepfarm
