@@ -15,6 +15,9 @@ STAGE3_TAG=20200214
 BINFARM_TYPE=opt
 # Gentoo profile to set
 BINFARM_PROFILE=default/linux/amd64/17.1
+# Base directory where output packages will be written
+# Note: for SELinux do not forget to make chcon -Rt svirt_sandbox_file_t /var/hepfarm/pkgs
+PKGS_OUT_DIR=/var/hepfarm/pkgs
 
 # Docker command to use. By default expects user named `collector' to exist
 # in the system.
@@ -22,21 +25,22 @@ DOCKER=sudo -u collector docker
 # Options for creating an archive of root filesystem additions.
 ARCHIVE_OPTS=--exclude=.keep --exclude=*.sw?
 
-all: base-packages.$(BINFARM_TYPE).$(PORTAGE_TAG).tar
+all: pkgs
 
 # virtual target -- alias for base binfarm image
 binfarm: binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 # virtual target -- "all included" binfarm image
 hepfarm: hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 
+# virtual target -- produces packages (long-running task!)
 # TODO: make archive from dir?
 # TODO: some changes are not tested
-packages.$(BINFARM_TYPE).$(PORTAGE_TAG).tar: binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt hepfarm-pkgs-set.txt
+pkgs: hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
+	sudo -u collector mkdir -p $(PKGS_OUT_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG)
 	$(DOCKER) run --rm \
-		-v $(PWD)/packages.$(BINFARM_TYPE).$(PORTAGE_TAG):/var/cache/binpkgs \
-		-v $(PWD)/hepfarm-pkgs-set.txt:/etc/portage/sets/hepfarm \
+		-v $(PKGS_OUT_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG):/var/cache/binpkgs:z \
 		$(shell cat $<) \
-		/vin/bash -c 'sudo emerge @hepfarm; sudo quickpkg --include-config=y "*/*"'
+		/bin/bash -c 'sudo emerge -g @hepfarm ;  sudo quickpkg --include-config=y "*/*"'
 
 hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.01.d/root.d.tar context.01.d/Dockerfile \
 														binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
@@ -76,4 +80,4 @@ root.00.d/etc/portage/make.conf: presets/make.conf.common presets/make.conf.$(BI
 clean:
 	rm -f context.*.d/root.d.tar
 
-.PHONY: all clean binfarm hepfarm
+.PHONY: all clean binfarm hepfarm pkgs

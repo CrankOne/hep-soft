@@ -6,21 +6,26 @@
 sci-physics/geant
 sci-physics/root
 sci-visualization/gnuplot
+sci-libs/armadillo
 
 # Development tools
 dev-util/strace
 net-analyzer/nmap
 dev-util/valgrind
+dev-util/cmake
 sys-devel/gdb
 sys-devel/clang
 dev-lang/swig:0
+dev-vcs/git
 
 # Auxiliary development, libraries
 dev-libs/capnproto
 dev-libs/protobuf
 dev-libs/xerces-c
+dev-libs/jemalloc
 dev-cpp/yaml-cpp
 dev-cpp/ctemplate
+app-doc/doxygen
 
 # Python ecosystem
 dev-python/virtualenv
@@ -38,3 +43,6 @@ dev-db/mysql++
 # Frontend
 net-libs/nodejs
 
+# Misc
+app-text/tree
+app-shells/zsh

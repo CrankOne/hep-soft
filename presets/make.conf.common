@@ -4,7 +4,7 @@ FEATURES="-ipc-sandbox -mount-sandbox -network-sandbox -pid-sandbox"
 # - this is due to unpriveleged run:
 FEATURES="${FEATURES} -sandbox -usersandbox"
 
-MAKEOPTS="-j15"  # TODO: make it generated
+MAKEOPTS="-j4"  # TODO: make it generated
 # Remote location with binary packages
 PORTAGE_BINHOST="http://hep-soft.crank.qcrypt.org/20200214-opt/"
 # TODO: make it generated
