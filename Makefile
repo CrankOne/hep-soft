@@ -17,13 +17,15 @@ BINFARM_TYPE=opt
 BINFARM_PROFILE=default/linux/amd64/17.1
 # Base directory where output packages will be written
 # Note: for SELinux do not forget to make chcon -Rt svirt_sandbox_file_t /var/hepfarm/pkgs
-PKGS_OUT_DIR=/var/hepfarm/pkgs
+PKGS_LOCAL_DIR=/var/hepfarm/pkgs
 
 # Docker command to use. By default expects user named `collector' to exist
 # in the system.
 DOCKER=sudo -u collector docker
 # Options for creating an archive of root filesystem additions.
 ARCHIVE_OPTS=--exclude=.keep --exclude=*.sw?
+
+PKGS_LOCAL_CURRENT_DIR=$(PKGS_LOCAL_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG)
 
 all: pkgs
 
@@ -35,12 +37,13 @@ hepfarm: hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 # virtual target -- produces packages (long-running task!)
 # TODO: make archive from dir?
 # TODO: some changes are not tested
+# TODO: directory for emerge's logs (--quiet-build=y)
 pkgs: hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
-	sudo -u collector mkdir -p $(PKGS_OUT_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG)
+	sudo -u collector mkdir -p $(PKGS_LOCAL_CURRENT_DIR)
 	$(DOCKER) run --rm \
-		-v $(PKGS_OUT_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG):/var/cache/binpkgs:z \
+		-v $(PKGS_LOCAL_CURRENT_DIR):/var/cache/binpkgs:z \
 		$(shell cat $<) \
-		/bin/bash -c 'sudo emerge -g @hepfarm ;  sudo quickpkg --include-config=y "*/*"'
+		/bin/bash -c 'sudo emerge -g --keep-going=y --quiet-build=y @hepfarm ; sudo quickpkg --include-config=y "*/*"'
 
 hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.01.d/root.d.tar context.01.d/Dockerfile \
 														binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
@@ -63,12 +66,15 @@ context.01.d/root.d.tar: $(shell find root.01.d -type f -print) \
 						root.01.d/etc/portage/sets/hepfarm
 	tar cvf $@ $(ARCHIVE_OPTS) -C root.01.d .
 
+# TODO: this must be done for release image, once all the stuff is done
+#root.01.d/etc/portage/env/binhost.conf:
+#	echo "PORTAGE_BINHOST=\"http://hep-soft.crank.qcrypt.org/20200214-opt/\"" > $@
+
 #
 # Base layer (binfarm) context
 context.00.d/root.d.tar: $(shell find root.00.d -type f -print) \
 						  	root.00.d/etc/portage/make.conf
 	tar cvf $@ $(ARCHIVE_OPTS) -C root.00.d .
-
 
 root.01.d/etc/portage/sets/hepfarm: presets/pkgs2build.txt
 	grep -v '^#' $< | sed '/^$$/d' | sort | uniq > $@
@@ -76,6 +82,9 @@ root.01.d/etc/portage/sets/hepfarm: presets/pkgs2build.txt
 root.00.d/etc/portage/make.conf: presets/make.conf.common presets/make.conf.$(BINFARM_TYPE)
 	cp $< $@
 	cat presets/make.conf.$(BINFARM_TYPE) >> $@
+
+root.00.d/etc/portage/env/binhost.conf:
+	echo "PORTAGE_BINHOST=\"$(PKGS_LOCAL_CURRENT_DIR)\"" > $@
 
 clean:
 	rm -f context.*.d/root.d.tar

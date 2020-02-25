@@ -5,9 +5,6 @@ FEATURES="-ipc-sandbox -mount-sandbox -network-sandbox -pid-sandbox"
 FEATURES="${FEATURES} -sandbox -usersandbox"
 
 MAKEOPTS="-j4"  # TODO: make it generated
-# Remote location with binary packages
-PORTAGE_BINHOST="http://hep-soft.crank.qcrypt.org/20200214-opt/"
-# TODO: make it generated
 
 COMMON_FLAGS="-O2 -pipe"
 CFLAGS="${COMMON_FLAGS}"

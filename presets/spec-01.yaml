@@ -1,0 +1,90 @@
+# This file lists packages to be installed in tier #2
+
+hf-sci-soft:
+    sci-physics/geant:
+        env: [debugsyms, install-sources]
+        use: [data, zlib, dawn, doc, examples, gdml, opengl, qt5, vrml]
+        deps:
+            # required by dev-qt/qtgui-5.13.2::gentoo[xcb]
+            # required by dev-qt/qtprintsupport-5.13.2::gentoo
+            # required by sci-physics/geant-4.10.05_p01::gentoo[qt5]
+            # required by sci-physics/geant-data-4.10.05::gentoo
+            ">=x11-libs/libxcb-1.13.1 xkb": { use: [xkb] }
+            # required by dev-qt/qtgui-5.13.2::gentoo[xcb]
+            # required by dev-qt/qtprintsupport-5.13.2::gentoo
+            # required by sci-physics/geant-4.10.05_p01::gentoo[qt5]
+            # required by sci-physics/geant-data-4.10.05::gentoo
+            ">=x11-libs/libxkbcommon-0.9.1": { use: [X] }
+            # required by dev-qt/qtcore-5.13.2-r2::gentoo
+            # required by dev-qt/qtgui-5.13.2::gentoo
+            # required by dev-qt/qtprintsupport-5.13.2::gentoo
+            # required by sci-physics/geant-4.10.05_p01::gentoo[qt5]
+            # required by sci-physics/geant-data-4.10.05::gentoo
+            ">=dev-libs/libpcre2-10.33-r1": { use: [pcre16] }
+            "sci-physics/geant-data": { keywords: [~amd64] }
+            "app-doc/geant-docs": { keywords: [~amd64] }
+    sci-physics/root:
+        env: [debugsyms, install-sources]
+        deps:
+            # required by sci-physics/root-6.12.06-r11::gentoo[asimage]
+            # required by sci-physics/root (argument)
+            ">=media-libs/libafterimage-1.20-r3": { use: [jpeg, tiff, gif, png]}
+            # required by sci-physics/root-6.12.06-r11::gentoo[qt5,X]
+            # required by sci-physics/root (argument)
+            ">=dev-qt/qtwebengine-5.13.2": { use: [widgets]}
+    sci-visualization/gnuplot:
+        use: [gd, readline, X, cairo, compat, latex, libcaca, libcerf, lua, qt5, wxwidgets]
+        deps:
+            # required by sci-visualization/gnuplot-5.2.7::gentoo[gd]
+            # required by sci-visualization/gnuplot (argument)
+            ">=media-libs/gd-2.2.5-r2": { use: [png] }
+            # required by x11-libs/gtk+-3.24.13::gentoo
+            # required by x11-themes/adwaita-icon-theme-3.32.0::gentoo
+            # required by x11-libs/gtk+-2.24.32-r1::gentoo
+            # required by x11-libs/wxGTK-3.0.4-r2::gentoo[X]
+            # required by sci-visualization/gnuplot-5.2.7::gentoo[wxwidgets]
+            # required by sci-visualization/gnuplot (argument)
+            ">=x11-libs/cairo-1.16.0-r3": { use: [X] }
+    sci-libs/armadillo:
+        env: [debugsyms, install-sources]
+        use: [lapack, arpack, blas, hdf5, superlu, tbb]
+
+hf-dev-tools:
+    dev-util/strace: {}
+    net-analyzer/nmap: {}
+    dev-util/valgrind: {}
+    dev-util/cmake: {}
+    sys-devel/gdb: {}
+    sys-devel/clang: {}
+    dev-lang/swig:0: {}
+    dev-vcs/git: {}
+
+hf-aux-dev:
+    dev-libs/capnproto:
+        keywords: [ ~amd64 ]
+    dev-libs/protobuf: {}
+    dev-libs/xerces-c: {}
+    dev-libs/jemalloc: {}
+    dev-cpp/yaml-cpp: {}
+    dev-cpp/ctemplate: {}
+    app-doc/doxygen: {}
+
+hf-python:
+    dev-python/virtualenv: {}
+    dev-python/pip: {}
+    dev-python/celery: {}
+    dev-python/flask: {}
+    www-servers/gunicorn: {}
+    www-servers/lighttpd: {}
+
+hf-db:
+    dev-db/postgresql: {}
+    dev-db/mysql: {}
+    dev-db/mysql++: {}
+
+hf-frontend:
+    net-libs/nodejs: {}
+
+hf-misc:
+    app-text/tree: {}
+    app-shells/zsh: {}

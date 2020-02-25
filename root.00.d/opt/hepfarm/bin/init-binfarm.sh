@@ -12,25 +12,6 @@ set -e
 BINFARM_TYPE=$1
 BINFARM_PROFILE=$2
 
-# Make base system-wide build assets
-mkdir -p /etc/portage/env/
-if [ "dbg" == ${BINFARM_TYPE} ] ; then
-    echo "[init-binfarm.sh] image type is set to DEBUG (dbg)"
-    cat <<-EOF >> /etc/portage/env/debugsyms
-	CFLAGS="${CFLAGS} -ggdb"
-	CXXFLAGS="${CXXFLAGS} -ggdb"
-	FEATURES="${FEATURES} splitdebug compressdebug -nostrip buildpkg"
-	USE="debug sqlite"
-	EOF
-    echo 'FEATURES="${FEATURES} installsources"' > /etc/portage/env/installsources
-    echo 'USE="${USE} debug"' >> /etc/portage/make.conf
-elif [ "opt" == ${BINFARM_TYPE} ] ; then
-    echo "[init-binfarm.sh] image type is set to PRODUCTION (opt)"
-    echo 'FEATURES="${FEATURES} buildpkg"' >> /etc/portage/make.conf
-else
-    (>2 echo "Unknown binfarm configuration provided: \"${BINFARM_TYPE}\". Aborted." )
-fi
-
 # Set profile, if given
 if [ ! -z "${BINFARM_PROFILE}" ] ; then
     eselect profile set ${BINFARM_PROFILE}
