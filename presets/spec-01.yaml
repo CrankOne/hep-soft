@@ -9,7 +9,7 @@ hf-sci-soft:
             # required by dev-qt/qtprintsupport-5.13.2::gentoo
             # required by sci-physics/geant-4.10.05_p01::gentoo[qt5]
             # required by sci-physics/geant-data-4.10.05::gentoo
-            ">=x11-libs/libxcb-1.13.1 xkb": { use: [xkb] }
+            ">=x11-libs/libxcb-1.13.1": { use: [xkb] }
             # required by dev-qt/qtgui-5.13.2::gentoo[xcb]
             # required by dev-qt/qtprintsupport-5.13.2::gentoo
             # required by sci-physics/geant-4.10.05_p01::gentoo[qt5]
@@ -23,7 +23,7 @@ hf-sci-soft:
             ">=dev-libs/libpcre2-10.33-r1": { use: [pcre16] }
             "sci-physics/geant-data": { keywords: [~amd64] }
             "app-doc/geant-docs": { keywords: [~amd64] }
-    sci-physics/root:
+    <sci-physics/root-9999:
         env: [debugsyms, install-sources]
         deps:
             # required by sci-physics/root-6.12.06-r11::gentoo[asimage]
@@ -32,6 +32,7 @@ hf-sci-soft:
             # required by sci-physics/root-6.12.06-r11::gentoo[qt5,X]
             # required by sci-physics/root (argument)
             ">=dev-qt/qtwebengine-5.13.2": { use: [widgets]}
+        keywords: [~amd64]
     sci-visualization/gnuplot:
         use: [gd, readline, X, cairo, compat, latex, libcaca, libcerf, lua, qt5, wxwidgets]
         deps:
@@ -62,12 +63,20 @@ hf-dev-tools:
 hf-aux-dev:
     dev-libs/capnproto:
         keywords: [ ~amd64 ]
+    dev-libs/boost:
+        use: [context, lzma, numpy, python, tools, zstd]
     dev-libs/protobuf: {}
-    dev-libs/xerces-c: {}
+    dev-libs/xerces-c: { use: [curl] }
     dev-libs/jemalloc: {}
     dev-cpp/yaml-cpp: {}
     dev-cpp/ctemplate: {}
-    app-doc/doxygen: {}
+    app-doc/doxygen:
+        use: [clang, dot, doxysearch, latex, qt5]
+        deps:
+            # required by media-gfx/graphviz-2.42.3::gentoo
+            # required by app-doc/doxygen-1.8.16-r1::gentoo[dot]
+            # required by doxygen (argument)
+            media-libs/gd: { use: [jpeg, truetype, fontconfig] }
 
 hf-python:
     dev-python/virtualenv: {}
@@ -75,16 +84,24 @@ hf-python:
     dev-python/celery: {}
     dev-python/flask: {}
     www-servers/gunicorn: {}
-    www-servers/lighttpd: {}
+    www-servers/lighttpd:
+        use: [bzip2, gdbm, ipv6, pcre, sqlite, ssl, xattr, zlib, dbi, fam,
+              geoip, kerberos, ldap, libev, -libressl, lua, memcached, mysql,
+              -php, postgres, -rrdtool, sasl, webdav]
 
 hf-db:
-    dev-db/postgresql: {}
-    dev-db/mysql: {}
+    dev-db/postgresql:
+        use: [nls, pam, readline, server, ssl, zlib, kerberos, ldap, -libressl,
+              llvm, perl, python, -tcl, threads, uuid, xml]
+    dev-db/mysql:
+        use: [perl, server, jemalloc, yassl]
     dev-db/mysql++: {}
 
 hf-frontend:
     net-libs/nodejs: {}
 
 hf-misc:
+    app-editors/vim:
+        use: [-minimal acl cscope python vim-pager]
     app-text/tree: {}
     app-shells/zsh: {}
