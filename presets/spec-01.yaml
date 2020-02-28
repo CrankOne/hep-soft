@@ -1,8 +1,7 @@
-# This file lists packages to be installed in tier #2
-
+# This file lists packages to be installed in tier #1
 hf-sci-soft:
     sci-physics/geant:
-        env: [debugsyms, install-sources]
+        env: [debugsyms.conf, install-sources.conf]
         use: [data, zlib, dawn, doc, examples, gdml, opengl, qt5, vrml]
         deps:
             # required by dev-qt/qtgui-5.13.2::gentoo[xcb]
@@ -24,7 +23,7 @@ hf-sci-soft:
             "sci-physics/geant-data": { keywords: [~amd64] }
             "app-doc/geant-docs": { keywords: [~amd64] }
     <sci-physics/root-9999:
-        env: [debugsyms, install-sources]
+        env: [debugsyms.conf, install-sources.conf]
         deps:
             # required by sci-physics/root-6.12.06-r11::gentoo[asimage]
             # required by sci-physics/root (argument)
@@ -47,7 +46,7 @@ hf-sci-soft:
             # required by sci-visualization/gnuplot (argument)
             ">=x11-libs/cairo-1.16.0-r3": { use: [X] }
     sci-libs/armadillo:
-        env: [debugsyms, install-sources]
+        env: [debugsyms.conf, install-sources.conf]
         use: [lapack, arpack, blas, hdf5, superlu, tbb]
 
 hf-dev-tools:

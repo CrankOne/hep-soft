@@ -1,0 +1,7 @@
+hf-base:
+    app-editors/vim:
+        use: [minimal]
+    app-admin/sudo: {}
+    app-portage/gentoolkit: {}
+    app-portage/cpuid2cpuflags: {}
+    sys-fs/squashfs-tools: {}

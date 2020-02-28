@@ -3,6 +3,7 @@ import sys
 import re
 import yaml
 import io
+import argparse
 
 # Regular expression for the package atom entry
 rxPortageAtom = re.compile(r'^(?P<quantify>[<>]?=?)?(?P<group>[\w\-]+)/(?P<name>[\w\-]+\w)(?:-(?P<ver>[\d.]+))?(?:(?P<patch>.+)?)$')
@@ -23,10 +24,14 @@ class AtomRef(object):
     subsidiary information: keywords, useflags, licences, etc.
     """
     def __init__(self, name, payload=None, partOfSet=None):
+        """
+        Initializes the instance with given portage package atom expression
+        and subsidiary payload.
+        """
         self.name = name
         self._d = get_atom_dict(name)
         self._payload = payload if payload else dict()
-        self._deps = [ AtomRef(*item) for item in self._payload['deps'].items() ] \
+        self.deps = [ AtomRef(*item) for item in self._payload['deps'].items() ] \
                      if 'deps' in self._payload else []
         self._partOfSet = partOfSet
 
@@ -40,7 +45,7 @@ class AtomRef(object):
     def write_props_to(self, propName, f):
         if propName in self._payload:
             f.write( '%s %s\n'%( self.name, ' '.join(self._payload[propName]) ) )
-        for depAtom in self._deps:
+        for depAtom in self.deps:
             depAtom.write_props_to(propName, f)
 
 class SmartConfig(object):
@@ -65,12 +70,14 @@ class SmartConfig(object):
         self._io.close()
 
 
-def main( specFileName, baseDir='2rem' ):
+def main( config, root_dir='/tmp', list_sets=False ):
     """
     Main entry point, deploys file tree.
     """
+    if not list_sets and not root_dir:
+        raise RuntimeError( 'root directory parameter is not set' )
     # Parse specification
-    with open(specFileName, 'r') as f:
+    with open(config, 'r') as f:
         try:
             spec = yaml.safe_load(f)
         except yaml.YAMLError as exc:
@@ -78,20 +85,40 @@ def main( specFileName, baseDir='2rem' ):
             sys.exit(1)
     # Generate environment tree
     for setName in sorted(spec.keys()):
-        setFileName = os.path.join( baseDir, 'etc/portage/sets', setName )
+        if list_sets:
+            sys.stdout.write('@%s '%setName)
+            continue
+        setFileName = os.path.join( root_dir, 'etc/portage/sets', setName )
         pkgNames = sorted(spec[setName].keys())
         # Write set file
         with SmartConfig( setFileName ) as setFile:
             setFile.write('\n'.join(pkgNames))
+        prevEnvFileContent = None
         for pkgName, pkgSpec in spec[setName].items():
             pkg = AtomRef(pkgName, pkgSpec, setName)
-            for prop in ( 'keywords', 'license', 'mask', 'use' ):
-                pt = os.path.join( baseDir, 'etc/portage/package.%s'%prop, pkg.cfgFileNamePat )
+            for prop in ( 'keywords', 'license', 'mask', 'use', 'env' ):
+                pt = os.path.join( root_dir, 'etc/portage/package.%s'%prop, pkg.cfgFileNamePat )
                 with SmartConfig(pt, 'w') as f:
                     pkg.write_props_to(prop, f)
             # TODO: append (?) env file
             # ...
+    if list_sets:
+        sys.stdout.write('\n')
 
 if "__main__" == __name__:
-    sys.exit(main( sys.argv[1], sys.argv[2] ))
+    p = argparse.ArgumentParser( description="Generate Gentoo Portage"
+            " environment files environment. Accepts a .yaml document"
+            " (specification) describing packages (atoms) to be installed,"
+            " generates a set of package.[use|license|keyword] files to be"
+            " consumed by Gentoo Portage system."
+            , epilog="Typical use case is to generate additions for docker"
+            " images to be consumed by Dockerfile via ADD command." )
+    p.add_argument('-d', '--root-dir', help='Base directory for filesystem deployment.')
+    p.add_argument('-c', '--config', help='Configuration file.')
+    p.add_argument('-l', '--list-sets'
+            , help='When given causes the script to print list of sets'
+            ' from given configuration file, without generating the'
+            ' filesystem subtree.'
+            , action='store_true' )
+    sys.exit(main(**vars(p.parse_args())))
 
