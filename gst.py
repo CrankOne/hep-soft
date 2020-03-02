@@ -1,3 +1,10 @@
+"""
+Generate Gentoo Portage environment files environment.
+Accepts a .yaml document (specification) describing packages (atoms) to be
+installed, generates a set of package.[use|license|keyword] files to be
+consumed by Gentoo Portage system.
+"""
+
 import os
 import sys
 import re
@@ -100,17 +107,11 @@ def main( config, root_dir='/tmp', list_sets=False ):
                 pt = os.path.join( root_dir, 'etc/portage/package.%s'%prop, pkg.cfgFileNamePat )
                 with SmartConfig(pt, 'w') as f:
                     pkg.write_props_to(prop, f)
-            # TODO: append (?) env file
-            # ...
     if list_sets:
         sys.stdout.write('\n')
 
 if "__main__" == __name__:
-    p = argparse.ArgumentParser( description="Generate Gentoo Portage"
-            " environment files environment. Accepts a .yaml document"
-            " (specification) describing packages (atoms) to be installed,"
-            " generates a set of package.[use|license|keyword] files to be"
-            " consumed by Gentoo Portage system."
+    p = argparse.ArgumentParser( description=__doc__
             , epilog="Typical use case is to generate additions for docker"
             " images to be consumed by Dockerfile via ADD command." )
     p.add_argument('-d', '--root-dir', help='Base directory for filesystem deployment.')

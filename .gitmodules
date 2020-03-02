@@ -1,0 +1,3 @@
+[submodule "root.00.d/var/db/repos/q-crypt-hep"]
+	path = root.binfarm.d/var/db/repos/q-crypt-hep
+	url = git@github.com:CrankOne/q-crypt-hep-overlay.git

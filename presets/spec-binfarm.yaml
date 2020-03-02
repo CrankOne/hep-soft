@@ -3,5 +3,8 @@ hf-base:
         use: [minimal]
     app-admin/sudo: {}
     app-portage/gentoolkit: {}
+    #app-portage/repoman: {}
+    app-portage/layman: {}
     app-portage/cpuid2cpuflags: {}
     sys-fs/squashfs-tools: {}
+    dev-vcs/git: {}

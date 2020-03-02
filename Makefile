@@ -22,8 +22,12 @@ PKGS_LOCAL_DIR=/var/hepfarm/pkgs
 # Docker command to use. By default expects user named `collector' to exist
 # in the system.
 DOCKER=sudo -u collector docker
+# Python executable
+PYTHON=python
 # Options for creating an archive of root filesystem additions.
-ARCHIVE_OPTS=--exclude=.keep --exclude=*.sw?
+ARCHIVE_OPTS=--exclude=.keep --exclude=*.sw? --exclude=.git
+# Directory for temporary output of root filesystem subtrees
+TMP_DIR=/tmp/hep-soft
 
 PKGS_LOCAL_CURRENT_DIR=$(PKGS_LOCAL_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG)
 
@@ -62,29 +66,50 @@ binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.00.d/root.d.tar 
 				--build-arg BINFARM_PROFILE=$(BINFARM_PROFILE) \
 		   		context.00.d
 
-context.01.d/root.d.tar: $(shell find root.01.d -type f -print) \
-						root.01.d/etc/portage/sets/hepfarm
-	tar cvf $@ $(ARCHIVE_OPTS) -C root.01.d .
+#context.01.d/root.d.tar: $(shell find root.01.d -type f -print) \
+#						root.01.d/etc/portage/sets/hepfarm
+#	tar cvf $@ $(ARCHIVE_OPTS) -C root.01.d .
 
 # TODO: this must be done for release image, once all the stuff is done
 #root.01.d/etc/portage/env/binhost.conf:
 #	echo "PORTAGE_BINHOST=\"http://hep-soft.crank.qcrypt.org/20200214-opt/\"" > $@
 
-#
-# Base layer (binfarm) context
-context.00.d/root.d.tar: $(shell find root.00.d -type f -print) \
-						  	root.00.d/etc/portage/make.conf
-	tar cvf $@ $(ARCHIVE_OPTS) -C root.00.d .
+#image-binfarm: image-%-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
+#	echo "gtfo"
 
-root.01.d/etc/portage/sets/hepfarm: presets/pkgs2build.txt
-	grep -v '^#' $< | sed '/^$$/d' | sort | uniq > $@
+# Packages output directory
+$(PKGS_LOCAL_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG):
+	sudo -u collector mkdir -p $(shell dirname $@)
+	sudo -u collector touch $@
 
-root.00.d/etc/portage/make.conf: presets/make.conf.common presets/make.conf.$(BINFARM_TYPE)
-	cp $< $@
-	cat presets/make.conf.$(BINFARM_TYPE) >> $@
 
-root.00.d/etc/portage/env/binhost.conf:
-	echo "PORTAGE_BINHOST=\"$(PKGS_LOCAL_CURRENT_DIR)\"" > $@
+
+image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: 	context.binfarm.d/root.d.tar \
+																context.binfarm.d/Dockerfile
+	$(DOCKER) build -t hepfarm-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
+				--iidfile $@ \
+				--build-arg PORTAGE_TAG=$(PORTAGE_TAG) \
+				--build-arg PLATFORM=$(PLATFORM) \
+				--build-arg STAGE3_TAG=$(STAGE3_TAG) \
+				--build-arg BINFARM_TYPE=$(BINFARM_TYPE) \
+				--build-arg BINFARM_PROFILE=$(BINFARM_PROFILE) \
+		context.binfarm.d
+
+
+# Temp dir for rendering the root filesystems
+$(TMP_DIR):
+	mkdir -p $@
+
+# Complete subtree for image
+.SECONDEXPANSION:
+context.%.d/root.d.tar: $$(shell find root.%.d -type f -print) \
+						presets/spec-%.yaml \
+					  | $(TMP_DIR)
+	cp -r root.$*.d $(TMP_DIR)
+	$(PYTHON) gst.py -c presets/spec-$*.yaml -d $(TMP_DIR)/root.$*.d
+	echo "MAKEOPTS=\"-j$(shell nproc)\"" > $(TMP_DIR)/root.binfarm.d/etc/portage/make.conf
+	tar cf $@ $(ARCHIVE_OPTS) -C $(TMP_DIR)/root.$*.d .
+	
 
 clean:
 	rm -f context.*.d/root.d.tar

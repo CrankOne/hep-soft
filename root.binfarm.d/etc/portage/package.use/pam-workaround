@@ -1,0 +1,3 @@
+# This file will be removed aftwer world update. Intended to overcome
+# circular dependencies issue with filecaps/pam packages.
+sys-libs/pam -filecaps

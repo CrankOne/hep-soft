@@ -21,8 +21,6 @@ tags
 .settings
 .dat
 # common generated
-context.??.d/root.d.tar
+context.*.d/root.d.tar
 *farm-*.txt
 # particular generated
-root.00.d/etc/portage/make.conf
-root.01.d/etc/portage/sets/hepfarm

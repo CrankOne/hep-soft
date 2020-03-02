@@ -9,14 +9,6 @@
 
 set -e
 
-BINFARM_TYPE=$1
-BINFARM_PROFILE=$2
-
-# Set profile, if given
-if [ ! -z "${BINFARM_PROFILE}" ] ; then
-    eselect profile set ${BINFARM_PROFILE}
-fi
-
 # Set locale (need to decrease the size of /usr/lib64/locale/locale-archive
 # blob)
 echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen
@@ -25,13 +17,15 @@ locale-gen
 # This temporarily disables CAPS support for pam to get rid of circular
 # dependency of sys-libs/pam vs. sys-libs/libcap
 echo 'sys-libs/pam -filecaps' > /etc/portage/package.use/pam-workaround
-
 # Rebuild everything
+#revdep-rebuild
 emerge -guDN @world
 rm /etc/portage/package.use/pam-workaround
 emerge -guDN @world
+emerge -guDN @hf-base
 emerge --depclean
 revdep-rebuild
+emerge -guDN @world
 
 # Forcefully generate all packages
 #quickpkg --include-config=y "*/*"
