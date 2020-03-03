@@ -3,18 +3,19 @@
 
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/portage/tags
-PORTAGE_TAG=20200214
+PORTAGE_TAG=20200222
 # Possible choices are: x86, x86-hardened, amd64, amd64-nomultilib,
 # amd64-hardened, amd64-hardened-nomultilib. See:
 # 	https://hub.docker.com/u/gentoo
 PLATFORM=amd64
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/stage3-amd64/tags
-STAGE3_TAG=20200214
-# Possible choices are: opt, dbg
+STAGE3_TAG=20200301
+# Possible choices are: opt, dbg -- assumed to coincide with one of the custom
+# profile (see
 BINFARM_TYPE=opt
-# Gentoo profile to set
-BINFARM_PROFILE=default/linux/amd64/17.1
+# Gentoo profile to be set
+GENTOO_PROFILE=q-crypt-hep:binfarm/$(BINFARM_TYPE)
 # Base directory where output packages will be written
 # Note: for SELinux do not forget to make chcon -Rt svirt_sandbox_file_t /var/hepfarm/pkgs
 PKGS_LOCAL_DIR=/var/hepfarm/pkgs
@@ -34,7 +35,7 @@ PKGS_LOCAL_CURRENT_DIR=$(PKGS_LOCAL_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_T
 all: pkgs
 
 # virtual target -- alias for base binfarm image
-binfarm: binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
+binfarm: image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 # virtual target -- "all included" binfarm image
 hepfarm: hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 
@@ -49,22 +50,13 @@ pkgs: hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 		$(shell cat $<) \
 		/bin/bash -c 'sudo emerge -g --keep-going=y --quiet-build=y @hepfarm ; sudo quickpkg --include-config=y "*/*"'
 
-hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.01.d/root.d.tar context.01.d/Dockerfile \
+hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.hepfarm.d/root.d.tar \
+														context.hepfarm.d/Dockerfile \
 														binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 	$(DOCKER) build -t hepfarm-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
 				--iidfile $@ \
 				--build-arg BASE_IMG=$(shell cat binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt) \
-		   		context.01.d
-
-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.00.d/root.d.tar context.00.d/Dockerfile
-	$(DOCKER) build -t binfarm-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
-				--iidfile $@ \
-				--build-arg PORTAGE_TAG=$(PORTAGE_TAG) \
-				--build-arg PLATFORM=$(PLATFORM) \
-				--build-arg STAGE3_TAG=$(STAGE3_TAG) \
-				--build-arg BINFARM_TYPE=$(BINFARM_TYPE) \
-				--build-arg BINFARM_PROFILE=$(BINFARM_PROFILE) \
-		   		context.00.d
+		   		context.hepfarm.d
 
 #context.01.d/root.d.tar: $(shell find root.01.d -type f -print) \
 #						root.01.d/etc/portage/sets/hepfarm
@@ -82,8 +74,6 @@ $(PKGS_LOCAL_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG):
 	sudo -u collector mkdir -p $(shell dirname $@)
 	sudo -u collector touch $@
 
-
-
 image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: 	context.binfarm.d/root.d.tar \
 																context.binfarm.d/Dockerfile
 	$(DOCKER) build -t hepfarm-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
@@ -92,13 +82,8 @@ image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: 	context.binfarm.d
 				--build-arg PLATFORM=$(PLATFORM) \
 				--build-arg STAGE3_TAG=$(STAGE3_TAG) \
 				--build-arg BINFARM_TYPE=$(BINFARM_TYPE) \
-				--build-arg BINFARM_PROFILE=$(BINFARM_PROFILE) \
+				--build-arg GENTOO_PROFILE=$(GENTOO_PROFILE) \
 		context.binfarm.d
-
-
-# Temp dir for rendering the root filesystems
-$(TMP_DIR):
-	mkdir -p $@
 
 # Complete subtree for image
 .SECONDEXPANSION:
@@ -109,9 +94,22 @@ context.%.d/root.d.tar: $$(shell find root.%.d -type f -print) \
 	$(PYTHON) gst.py -c presets/spec-$*.yaml -d $(TMP_DIR)/root.$*.d
 	echo "MAKEOPTS=\"-j$(shell nproc)\"" > $(TMP_DIR)/root.binfarm.d/etc/portage/make.conf
 	tar cf $@ $(ARCHIVE_OPTS) -C $(TMP_DIR)/root.$*.d .
-	
+
+# Temp dir for rendering the root filesystems
+$(TMP_DIR):
+	mkdir -p $@
 
 clean:
 	rm -f context.*.d/root.d.tar
+
+# runs local packages fileserver
+# WARNING: must be stopped manually, with ctrl+C or with `docker stop ...' if
+# ran with -d.
+pkg-srv.txt:
+	$(DOCKER) run --rm -ti \
+				--cidfile $@ \
+				--volume /var/hepfarm/pkgs:/var/www/localhost/htdocs \
+				--volume $(shell readlink -f srv/lighttpd.conf):/etc/lighttpd/lighttpd.conf \
+				-p 8789:80 sebp/lighttpd
 
 .PHONY: all clean binfarm hepfarm pkgs

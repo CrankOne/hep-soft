@@ -9,6 +9,8 @@ FROM gentoo/portage:$PORTAGE_TAG as portage
 # image is based on stage3-amd64
 FROM gentoo/stage3-$PLATFORM:$STAGE3_TAG
 
+ARG GENTOO_PROFILE=default/linux/amd64/17.1
+
 # copy portages to container
 # NOTE: avoid making it volume! Counterintuitive, but since Docker makes the
 # copy of all the numerous ebuilds, it will lead to significant performance
@@ -21,7 +23,7 @@ ADD root.d.tar /
 
 # Set custom profile for containerized build
 RUN eselect news read && \
-    eselect profile set q-crypt-hep:binfarm/opt && \
+    eselect profile set $GENTOO_PROFILE && \
     /bin/sh /opt/hepfarm/bin/init-binfarm.sh
 
 VOLUME /var/cache/binpkgs
