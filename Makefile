@@ -32,67 +32,58 @@ TMP_DIR=/tmp/hep-soft
 
 PKGS_LOCAL_CURRENT_DIR=$(PKGS_LOCAL_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG)
 
+ALL_SETS=$(shell $(PYTHON) gst.py -l -c presets/spec-hepsoft.yaml)
+
 all: pkgs
 
 # virtual target -- alias for base binfarm image
 binfarm: image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 # virtual target -- "all included" binfarm image
-hepfarm: hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
+hepfarm: image-hepsoft-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 
 # virtual target -- produces packages (long-running task!)
 # TODO: make archive from dir?
-# TODO: some changes are not tested
 # TODO: directory for emerge's logs (--quiet-build=y)
-pkgs: hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
+pkgs: image-hepsoft-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
 	sudo -u collector mkdir -p $(PKGS_LOCAL_CURRENT_DIR)
 	$(DOCKER) run --rm \
 		-v $(PKGS_LOCAL_CURRENT_DIR):/var/cache/binpkgs:z \
 		$(shell cat $<) \
-		/bin/bash -c 'sudo emerge -g --keep-going=y --quiet-build=y @hepfarm ; sudo quickpkg --include-config=y "*/*"'
-
-hepfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.hepfarm.d/root.d.tar \
-														context.hepfarm.d/Dockerfile \
-														binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
-	$(DOCKER) build -t hepfarm-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
-				--iidfile $@ \
-				--build-arg BASE_IMG=$(shell cat binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt) \
-		   		context.hepfarm.d
-
-#context.01.d/root.d.tar: $(shell find root.01.d -type f -print) \
-#						root.01.d/etc/portage/sets/hepfarm
-#	tar cvf $@ $(ARCHIVE_OPTS) -C root.01.d .
-
-# TODO: this must be done for release image, once all the stuff is done
-#root.01.d/etc/portage/env/binhost.conf:
-#	echo "PORTAGE_BINHOST=\"http://hep-soft.crank.qcrypt.org/20200214-opt/\"" > $@
-
-#image-binfarm: image-%-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
-#	echo "gtfo"
+		/bin/bash -c 'sudo emerge -g --keep-going=y --quiet-build=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*"'
 
 # Packages output directory
 $(PKGS_LOCAL_DIR)/$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG):
 	sudo -u collector mkdir -p $(shell dirname $@)
 	sudo -u collector touch $@
 
-image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: 	context.binfarm.d/root.d.tar \
-																context.binfarm.d/Dockerfile
-	$(DOCKER) build -t hepfarm-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
+image-hepsoft-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.hepsoft.d/root.d.tar \
+														context.hepsoft.d/Dockerfile \
+														image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt
+	$(DOCKER) build -t hepsoft-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
+				--iidfile $@ \
+				--build-arg BASE_IMG=$(shell cat image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt) \
+		   		context.hepsoft.d
+#
+# Produces bootstrapping image
+image-binfarm-$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG).txt: context.binfarm.d/root.d.tar \
+                                                              context.binfarm.d/Dockerfile
+	$(DOCKER) build -t binfarm-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
 				--iidfile $@ \
 				--build-arg PORTAGE_TAG=$(PORTAGE_TAG) \
 				--build-arg PLATFORM=$(PLATFORM) \
 				--build-arg STAGE3_TAG=$(STAGE3_TAG) \
-				--build-arg BINFARM_TYPE=$(BINFARM_TYPE) \
 				--build-arg GENTOO_PROFILE=$(GENTOO_PROFILE) \
 		context.binfarm.d
 
 # Complete subtree for image
 .SECONDEXPANSION:
 context.%.d/root.d.tar: $$(shell find root.%.d -type f -print) \
-						presets/spec-%.yaml \
-					  | $(TMP_DIR)
+                        presets/spec-%.yaml \
+                      | $(TMP_DIR)
+	rm -rf $(TMP_DIR)/*
 	cp -r root.$*.d $(TMP_DIR)
 	$(PYTHON) gst.py -c presets/spec-$*.yaml -d $(TMP_DIR)/root.$*.d
-	echo "MAKEOPTS=\"-j$(shell nproc)\"" > $(TMP_DIR)/root.binfarm.d/etc/portage/make.conf
+	echo "MAKEOPTS=\"-j$(shell nproc)\"" > $(TMP_DIR)/root.$*.d/etc/portage/make.conf
 	tar cf $@ $(ARCHIVE_OPTS) -C $(TMP_DIR)/root.$*.d .
 
 # Temp dir for rendering the root filesystems
@@ -102,9 +93,9 @@ $(TMP_DIR):
 clean:
 	rm -f context.*.d/root.d.tar
 
-# runs local packages fileserver
-# WARNING: must be stopped manually, with ctrl+C or with `docker stop ...' if
-# ran with -d.
+# runs local packages file server
+# WARNING: must be stopped manually, with ctrl+C. Or with `docker stop ...',
+# when ran with -d.
 pkg-srv.txt:
 	$(DOCKER) run --rm -ti \
 				--cidfile $@ \

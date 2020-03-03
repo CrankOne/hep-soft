@@ -22,5 +22,5 @@ tags
 .dat
 # common generated
 context.*.d/root.d.tar
-*farm-*.txt
+image-*.txt
 # particular generated

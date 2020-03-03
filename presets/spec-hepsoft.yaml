@@ -1,7 +1,7 @@
 # This file lists packages to be installed in tier #1
 hf-sci-soft:
     sci-physics/geant:
-        env: [debugsyms.conf, install-sources.conf]
+        env: [debugsyms.conf, installsources.conf]
         use: [data, zlib, dawn, doc, examples, gdml, opengl, qt5, vrml]
         deps:
             # required by dev-qt/qtgui-5.13.2::gentoo[xcb]
@@ -23,7 +23,7 @@ hf-sci-soft:
             "sci-physics/geant-data": { keywords: [~amd64] }
             "app-doc/geant-docs": { keywords: [~amd64] }
     <sci-physics/root-9999:
-        env: [debugsyms.conf, install-sources.conf]
+        env: [debugsyms.conf, installsources.conf]
         deps:
             # required by sci-physics/root-6.12.06-r11::gentoo[asimage]
             # required by sci-physics/root (argument)
@@ -46,7 +46,7 @@ hf-sci-soft:
             # required by sci-visualization/gnuplot (argument)
             ">=x11-libs/cairo-1.16.0-r3": { use: [X] }
     sci-libs/armadillo:
-        env: [debugsyms.conf, install-sources.conf]
+        env: [debugsyms.conf, installsources.conf]
         use: [lapack, arpack, blas, hdf5, superlu, tbb]
 
 hf-dev-tools:
@@ -86,6 +86,26 @@ hf-python:
         use: [bzip2, gdbm, ipv6, pcre, sqlite, ssl, xattr, zlib, dbi, fam,
               geoip, kerberos, ldap, libev, -libressl, lua, memcached, mysql,
               -php, postgres, -rrdtool, sasl, webdav]
+    dev-python/jupyter:
+        keywords: [~amd64]
+        deps:
+            dev-python/jupyter_console: { keywords: [~amd64] }
+            # required by dev-python/pyzmq-17.1.0::gentoo
+            # required by dev-python/ipyparallel-6.0.2-r1::gentoo
+            # required by dev-python/ipython-5.4.1-r2::gentoo[smp]
+            # required by dev-python/qtconsole-4.3.1::gentoo
+            # required by dev-python/jupyter-1.0.0-r2::gentoo
+            # required by @hf-python (argument)
+            ">=net-libs/zeromq-4.3.2": { use: [drafts] }
+            # required by dev-python/qtconsole-4.3.1::gentoo
+            # required by dev-python/jupyter-1.0.0-r2::gentoo
+            # required by @hf-python (argument)
+            ">=dev-python/PyQt5-5.13.2": { use: [svg gui widgets] }
+    dev-python/sphinx:
+        use: [ latex ]
+        deps:
+            media-libs/gd-2.2.5-r2: { use: [png jpeg] }
+
 
 hf-db:
     dev-db/postgresql:
