@@ -104,7 +104,7 @@ hf-python:
     dev-python/sphinx:
         use: [ latex ]
         deps:
-            media-libs/gd-2.2.5-r2: { use: [png jpeg] }
+            media-libs/gd: { use: [png jpeg] }
 
 
 hf-db:
@@ -119,7 +119,9 @@ hf-frontend:
     net-libs/nodejs: {}
 
 hf-misc:
-    app-editors/vim:
-        use: [-minimal acl cscope python vim-pager]
     app-text/tree: {}
     app-shells/zsh: {}
+
+hf-base:
+    app-editors/vim:
+        use: [-minimal acl cscope python vim-pager]

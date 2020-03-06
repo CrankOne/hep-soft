@@ -1,6 +1,0 @@
-RUN mkdir -p /etc/portage/env/ \
- && echo 'CFLAGS="${CFLAGS} -ggdb"' > /etc/portage/env/debugsyms \
- && echo 'CXXFLAGS="${CXXFLAGS} -ggdb"' >> /etc/portage/env/debugsyms \
- && echo 'FEATURES="${FEATURES} splitdebug compressdebug -nostrip"' >> /etc/portage/env/debugsyms \
- && echo 'USE="debug"' >> /etc/portage/env/debugsyms \
- && echo 'FEATURES="${FEATURES} installsources"' > /etc/portage/env/installsources

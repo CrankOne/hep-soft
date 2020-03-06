@@ -23,8 +23,12 @@ ADD root.d.tar /
 
 # Set custom profile for containerized build
 RUN eselect news read && \
-    eselect profile set $GENTOO_PROFILE && \
-    /bin/sh /opt/hepfarm/bin/init-binfarm.sh
+    eselect profile set $GENTOO_PROFILE
+
+# Make a bootstrap
+ADD bootstrap.sh .
+RUN /bin/sh bootstrap.sh && \
+    rm bootstrap.sh
 
 VOLUME /var/cache/binpkgs
 # Set default user to collector (created by init-binfar,sh)

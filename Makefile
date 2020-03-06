@@ -58,9 +58,11 @@ SUFFIX=$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG)
 # Local directory where this build's packages will be stored
 PKGS_LOCAL_CURRENT_DIR=$(PKGS_LOCAL_DIR)/$(SUFFIX)
 # All package sets in hepfarm
-ALL_SETS=$(shell $(PYTHON) gst.py -l -c presets/spec-hepsoft.yaml)
+ALL_SETS=$(shell $(PYTHON) exec/gen_subtree.py -l -c presets/spec-hepsoft.yaml)
 # Full build version variable
 HEPSOFT_VERSION=$(SUFFIX).$(shell git rev-parse --short HEAD)
+# Number of processes for building the stuff
+BUILD_NPROC=$(shell nproc)
 
 # GUARD is a function which calculates md5 sum for its
 # argument variable name. Note, that both cut and md5sum are
@@ -88,6 +90,13 @@ binfarm: image-binfarm-$(SUFFIX).txt
 hepfarm: image-hepsoft-$(SUFFIX).txt
 
 # virtual target for publishing packages on remote host
+# TODO: these instructions on the remote:
+# 		find $(REMOTE_DIR) -type d -exec chmod a+x {} \;
+# 	    find $(REMOTE_DIR) -type f -exec chmod a+x {} \;
+# may be imposed into rsync invokation with command like proposed here:
+#	https://stackoverflow.com/questions/9177135/rsync-deploy-and-file-directories-permissions
+# i.e.:
+# 	$ --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
 publish-pkgs:
 	rsync -av --info=progress2 --perms --chmod=a+r \
 		$(PKGS_LOCAL_CURRENT_DIR) $(REMOTE_HOST):$(REMOTE_DIR)
@@ -98,7 +107,7 @@ pkgs: image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
 	$(DOCKER) run --rm \
 		-v $(PKGS_LOCAL_CURRENT_DIR):/var/cache/binpkgs:z \
 		$(shell cat $<) \
-		/bin/bash -c 'sudo emerge -g --keep-going=y --quiet-build=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*"'
+		/bin/bash -c 'sudo emerge --keep-going=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*"'
 
 $(call GUARD,HEPSOFT_VERSION):
 	rm -rf HEPSOFT_VERSION*
@@ -135,14 +144,18 @@ image-binfarm-$(SUFFIX).txt: context.binfarm.d/root.d.tar \
 # __/ Utility Targets \________________________________________________________
 
 # Complete subtree for image (pattern rule)
+# TODO: shall depend on variables:
+# 	- PORTAGE_BINHOST
+# 	- BUILD_NPROC
 .SECONDEXPANSION:
 context.%.d/root.d.tar: $$(shell find root.%.d -type f -print) \
                         presets/spec-%.yaml \
                       | $(TMP_DIR)
 	rm -rf $(TMP_DIR)/*
 	cp -r root.$*.d $(TMP_DIR)
-	$(PYTHON) gst.py -c presets/spec-$*.yaml -d $(TMP_DIR)/root.$*.d
-	echo "MAKEOPTS=\"-j$(shell nproc)\"" > $(TMP_DIR)/root.$*.d/etc/portage/make.conf
+	$(PYTHON) exec/gen_subtree.py -c presets/spec-$*.yaml -d $(TMP_DIR)/root.$*.d
+	sh exec/hepsoft.sh -m -j$(BUILD_NPROC) \
+		$(if $(PORTAGE_BINHOST),-b$(PORTAGE_BINHOST),) > $(TMP_DIR)/root.$*.d/etc/portage/make.conf
 	tar cf $@ $(ARCHIVE_OPTS) -C $(TMP_DIR)/root.$*.d .
 
 root.binfarm.d/etc/hepsoft-version.txt: $(call GUARD,HEPSOFT_VERSION)

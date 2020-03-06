@@ -1,4 +1,0 @@
->=sci-physics/geant-python-4.10.00 ~amd64
->=sci-physics/geant-data-4.10.00 ~amd64
->=sci-physics/geant-4.10.00 ~amd64
->=sci-physics/clhep-2.3.1.0 ~amd64
