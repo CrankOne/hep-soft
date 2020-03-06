@@ -23,4 +23,5 @@ tags
 # common generated
 context.*.d/root.d.tar
 image-*.txt
+*_GUARD_*
 # particular generated

@@ -59,6 +59,15 @@ SUFFIX=$(PLATFORM).$(BINFARM_TYPE).$(PORTAGE_TAG)
 PKGS_LOCAL_CURRENT_DIR=$(PKGS_LOCAL_DIR)/$(SUFFIX)
 # All package sets in hepfarm
 ALL_SETS=$(shell $(PYTHON) gst.py -l -c presets/spec-hepsoft.yaml)
+# Full build version variable
+HEPSOFT_VERSION=$(SUFFIX).$(shell git rev-parse --short HEAD)
+
+# GUARD is a function which calculates md5 sum for its
+# argument variable name. Note, that both cut and md5sum are
+# members of coreutils package so they should be available on
+# nearly all systems.
+# see: https://stackoverflow.com/questions/11647859/make-targets-depend-on-variables
+GUARD = $(1)_GUARD_$(shell echo $($(1)) | md5sum | cut -d ' ' -f 1)
 
 #     ________________
 # __/ Virtual Targets \________________________________________________________
@@ -91,12 +100,16 @@ pkgs: image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
 		$(shell cat $<) \
 		/bin/bash -c 'sudo emerge -g --keep-going=y --quiet-build=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*"'
 
+$(call GUARD,HEPSOFT_VERSION):
+	rm -rf HEPSOFT_VERSION*
+	touch $@
+
 #     ______________________
 # __/ Docker Images Targets \__________________________________________________
 
 # TODO
-# image-hepsoft-publish:
-# 	...
+#image-hepsoft-publish:
+#	...
 
 # Produces image ready for building packages
 image-hepsoft-$(SUFFIX).txt: image-binfarm-$(SUFFIX).txt \
@@ -131,6 +144,9 @@ context.%.d/root.d.tar: $$(shell find root.%.d -type f -print) \
 	$(PYTHON) gst.py -c presets/spec-$*.yaml -d $(TMP_DIR)/root.$*.d
 	echo "MAKEOPTS=\"-j$(shell nproc)\"" > $(TMP_DIR)/root.$*.d/etc/portage/make.conf
 	tar cf $@ $(ARCHIVE_OPTS) -C $(TMP_DIR)/root.$*.d .
+
+root.binfarm.d/etc/hepsoft-version.txt: $(call GUARD,HEPSOFT_VERSION)
+	echo $(HEPSOFT_VERSION) > $@
 
 # Temp dir for rendering the root filesystems
 $(TMP_DIR):
