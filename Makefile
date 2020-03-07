@@ -93,10 +93,10 @@ clean:
 # 	...
 
 # virtual target -- alias for base binfarm image
-binfarm: image-binfarm-$(SUFFIX).txt
+binfarm: .cache/image-binfarm-$(SUFFIX).txt
 
 # virtual target -- "all included" binfarm image
-hepfarm: image-hepsoft-$(SUFFIX).txt
+hepfarm: .cache/image-hepsoft-$(SUFFIX).txt
 
 # virtual target for publishing packages on remote host
 # TODO: these instructions on the remote:
@@ -112,7 +112,7 @@ publish-pkgs:
 
 # Produces packages (long-running task!)
 # TODO: directory for emerge's logs (--quiet-build=y)
-pkgs: image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
+pkgs: .cache/image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
 	$(DOCKER) run --rm \
 		-v $(PKGS_LOCAL_CURRENT_DIR):/var/cache/binpkgs:z \
 		$(shell cat $<) \
@@ -126,12 +126,12 @@ $(call GUARD,HEPSOFT_VERSION): | .cache
 # __/ Docker Images Targets \__________________________________________________
 
 # TODO: find a way to use a dedicated user, as now it requires root access
-publish-image: image-hepsoft-$(SUFFIX).txt
+publish-image: .cache/image-hepsoft-$(SUFFIX).txt
 	docker tag $(shell cat $<) $(RELEASE_IMAGE_NAME)
 	docker push $(RELEASE_IMAGE_NAME)
 
 # Produces image ready for building packages
-.cache/image-hepsoft-$(SUFFIX).txt: image-binfarm-$(SUFFIX).txt \
+.cache/image-hepsoft-$(SUFFIX).txt: .cache/image-binfarm-$(SUFFIX).txt \
 									context.hepsoft.d/root.d.tar \
 									context.hepsoft.d/Dockerfile
 	$(DOCKER) build -t hepsoft-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
@@ -176,6 +176,7 @@ $(TMP_DIR):
 
 .cache:
 	mkdir -p $@
+	chmod a+rw $@
 
 $(PKGS_LOCAL_CURRENT_DIR):
 	sudo -u collector mkdir -p $(PKGS_LOCAL_CURRENT_DIR)
