@@ -30,16 +30,10 @@ STAGE3_TAG=20200301
 BINFARM_TYPE=opt
 # Gentoo profile to be set
 GENTOO_PROFILE=q-crypt-hep:binfarm/$(BINFARM_TYPE)
-# Base directory where output packages will be written
-# Note: for SELinux do not forget to run
-# 	$ chcon -Rt svirt_sandbox_file_t /var/hepfarm/pkgs
-PKGS_LOCAL_DIR=/var/hepfarm/pkgs
 
-# Remote host to publish packages (rsync used)
-REMOTE_HOST=crank.qcrypt.org
-# Directory on remote host for packages to be published (rsync used)
-REMOTE_DIR=/var/www/15-hepsoft-pkgs/
-
+#
+# UTILITY VARIABLES
+#
 # Docker command to use. By default expects user named `collector' to exist
 # in the system.
 DOCKER=sudo -u collector docker
@@ -49,6 +43,18 @@ PYTHON=python
 ARCHIVE_OPTS=--exclude=.keep --exclude=*.sw? --exclude=.git
 # Directory for temporary output of root filesystem subtrees
 TMP_DIR=/tmp/hep-soft
+# Base directory where output packages will be written
+# Note: for SELinux do not forget to run
+# 	$ chcon -Rt svirt_sandbox_file_t /var/hepfarm/pkgs
+PKGS_LOCAL_DIR=/var/hepfarm/pkgs
+
+#
+# REMOTE PUBLISHING
+#
+# Remote host to publish packages (rsync used)
+REMOTE_HOST=crank.qcrypt.org
+# Directory on remote host for packages to be published (rsync used)
+REMOTE_DIR=/var/www/15-hepsoft-pkgs/
 
 #     ___________________
 # __/ Inferred Variables \_____________________________________________________
@@ -63,13 +69,15 @@ ALL_SETS=$(shell $(PYTHON) exec/gen_subtree.py -l -c presets/spec-hepsoft.yaml)
 HEPSOFT_VERSION=$(SUFFIX).$(shell git rev-parse --short HEAD)
 # Number of processes for building the stuff
 BUILD_NPROC=$(shell nproc)
+# user/name:tag of release image (need for publishing)
+RELEASE_IMAGE_NAME=crankone/hepfarm-$(PLATFORM)-$(BINFARM_TYPE):$(STAGE3_TAG)
 
 # GUARD is a function which calculates md5 sum for its
 # argument variable name. Note, that both cut and md5sum are
 # members of coreutils package so they should be available on
 # nearly all systems.
 # see: https://stackoverflow.com/questions/11647859/make-targets-depend-on-variables
-GUARD = $(1)_GUARD_$(shell echo $($(1)) | md5sum | cut -d ' ' -f 1)
+GUARD = .cache/$(1)_GUARD_$(shell echo $($(1)) | md5sum | cut -d ' ' -f 1)
 
 #     ________________
 # __/ Virtual Targets \________________________________________________________
@@ -78,6 +86,7 @@ all: pkgs
 
 clean:
 	rm -f context.*.d/root.d.tar
+	rm -rf .cache
 
 # TODO:
 # clean-images:
@@ -92,13 +101,13 @@ hepfarm: image-hepsoft-$(SUFFIX).txt
 # virtual target for publishing packages on remote host
 # TODO: these instructions on the remote:
 # 		find $(REMOTE_DIR) -type d -exec chmod a+x {} \;
-# 	    find $(REMOTE_DIR) -type f -exec chmod a+x {} \;
+# 	    find $(REMOTE_DIR) -type f -exec chmod a+r {} \;
 # may be imposed into rsync invokation with command like proposed here:
 #	https://stackoverflow.com/questions/9177135/rsync-deploy-and-file-directories-permissions
-# i.e.:
+# i.g.:
 # 	$ --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
 publish-pkgs:
-	rsync -av --info=progress2 --perms --chmod=a+r \
+	rsync -av --info=progress2 --chmod=F644,D2775 \
 		$(PKGS_LOCAL_CURRENT_DIR) $(REMOTE_HOST):$(REMOTE_DIR)
 
 # Produces packages (long-running task!)
@@ -109,29 +118,30 @@ pkgs: image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
 		$(shell cat $<) \
 		/bin/bash -c 'sudo emerge --keep-going=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*"'
 
-$(call GUARD,HEPSOFT_VERSION):
-	rm -rf HEPSOFT_VERSION*
+$(call GUARD,HEPSOFT_VERSION): | .cache
+	rm -rf ./.cache/HEPSOFT_VERSION*
 	touch $@
 
 #     ______________________
 # __/ Docker Images Targets \__________________________________________________
 
-# TODO
-#image-hepsoft-publish:
-#	...
+# TODO: find a way to use a dedicated user, as now it requires root access
+publish-image: image-hepsoft-$(SUFFIX).txt
+	docker tag $(shell cat $<) $(RELEASE_IMAGE_NAME)
+	docker push $(RELEASE_IMAGE_NAME)
 
 # Produces image ready for building packages
-image-hepsoft-$(SUFFIX).txt: image-binfarm-$(SUFFIX).txt \
-							 context.hepsoft.d/root.d.tar \
-							 context.hepsoft.d/Dockerfile
+.cache/image-hepsoft-$(SUFFIX).txt: image-binfarm-$(SUFFIX).txt \
+									context.hepsoft.d/root.d.tar \
+									context.hepsoft.d/Dockerfile
 	$(DOCKER) build -t hepsoft-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
 				--iidfile $@ \
 				--build-arg BASE_IMG=$(shell cat $<) \
 		   		context.hepsoft.d
 
 # Produces bootstrapping image
-image-binfarm-$(SUFFIX).txt: context.binfarm.d/root.d.tar \
-							 context.binfarm.d/Dockerfile
+.cache/image-binfarm-$(SUFFIX).txt: context.binfarm.d/root.d.tar \
+							 		context.binfarm.d/Dockerfile
 	$(DOCKER) build -t binfarm-$(PLATFORM)-$(BINFARM_TYPE):$(PORTAGE_TAG) \
 				--iidfile $@ \
 				--build-arg PORTAGE_TAG=$(PORTAGE_TAG) \
@@ -144,25 +154,27 @@ image-binfarm-$(SUFFIX).txt: context.binfarm.d/root.d.tar \
 # __/ Utility Targets \________________________________________________________
 
 # Complete subtree for image (pattern rule)
-# TODO: shall depend on variables:
-# 	- PORTAGE_BINHOST
-# 	- BUILD_NPROC
+# 						$(call GUARD,PORTAGE_BINHOST)
+#						$(call GUARD,BUILD_NPROC)
 .SECONDEXPANSION:
 context.%.d/root.d.tar: $$(shell find root.%.d -type f -print) \
                         presets/spec-%.yaml \
+						$(call GUARD,HEPSOFT_VERSION) \
                       | $(TMP_DIR)
-	rm -rf $(TMP_DIR)/*
+	rm -rf $(TMP_DIR)/root.$*.d
 	cp -r root.$*.d $(TMP_DIR)
 	$(PYTHON) exec/gen_subtree.py -c presets/spec-$*.yaml -d $(TMP_DIR)/root.$*.d
 	sh exec/hepsoft.sh -m -j$(BUILD_NPROC) \
 		$(if $(PORTAGE_BINHOST),-b$(PORTAGE_BINHOST),) > $(TMP_DIR)/root.$*.d/etc/portage/make.conf
+	mkdir -p $(TMP_DIR)/root.$*.d/etc
+	echo $(HEPSOFT_VERSION) > $(TMP_DIR)/root.$*.d/etc/hepsoft-version.txt
 	tar cf $@ $(ARCHIVE_OPTS) -C $(TMP_DIR)/root.$*.d .
-
-root.binfarm.d/etc/hepsoft-version.txt: $(call GUARD,HEPSOFT_VERSION)
-	echo $(HEPSOFT_VERSION) > $@
 
 # Temp dir for rendering the root filesystems
 $(TMP_DIR):
+	mkdir -p $@
+
+.cache:
 	mkdir -p $@
 
 $(PKGS_LOCAL_CURRENT_DIR):
@@ -171,14 +183,19 @@ $(PKGS_LOCAL_CURRENT_DIR):
 #     ____________
 # __/ Aux targets \____________________________________________________________
 
+srv-start: .cache/pkg-srv.txt
+
 # runs local packages file server
 # WARNING: must be stopped manually, with ctrl+C. Or with `docker stop ...',
 # when ran with -d.
-pkg-srv.txt:
-	$(DOCKER) run --rm -ti \
+.cache/pkg-srv.txt:
+	$(DOCKER) run --rm -dti \
 				--cidfile $@ \
 				--volume /var/hepfarm/pkgs:/var/www/localhost/htdocs \
 				--volume $(shell readlink -f srv/lighttpd.conf):/etc/lighttpd/lighttpd.conf \
 				-p 8789:80 sebp/lighttpd
+# Use this to stop background file server container
+srv-stop:
+	$(DOCKER) stop $(shell cat .cache/pkg-srv.txt)
 
-.PHONY: all clean binfarm hepfarm pkgs publish-pkgs
+.PHONY: all clean binfarm hepfarm pkgs publish-pkgs publish-image srv-start srv-stop
