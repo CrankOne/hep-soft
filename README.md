@@ -21,11 +21,11 @@ This repository provides:
 
 1. A recipes for building a building environment layer for pre-compiled
 packages production. This base image should be then considered as a factory or
-"farm" (this is where "binfarm" word
-came from). The _binfarm_ image effectively is just a customized
-Gentoo `stage3` image. Once the basic environment is clamped by particular
-_binfarm_ release, the _binary packages_ may be then built and published for
-the purpose of fast assembling a Docker image for particular purpose;
+"farm" (this is where "binfarm" came from). The _binfarm_ image effectively is
+just a customized Gentoo `stage3` image. Once the basic environment is clamped
+by particular _binfarm_ release, the _binary packages_ may be then built and
+published for the purpose of fast assembling a Docker image for particular
+purpose;
 2. A boilerplate recipe(s) for building a number of packages. Once built, these
 packages can be then exploited for assembling a subject-specific docker images.
 
@@ -130,11 +130,11 @@ is not supposed to be published on any registry.
 just like in case of ordinary binary package-based distro... but with much more
 impressive customization possibilities!
 
-## Makefile variables
+## Makefile Variables
 
 All these variables have their default values set in Makefile. One may override
 them by editing the Makefile or by providing them in command line during `make`
-invokation.
+invokation. Below is the list of most important common ones.
 
 * `PORTAGE_TAG` should contain particular portage timestamp tag
 (like `20200214`). To see list of available tags, visit
@@ -142,54 +142,62 @@ invokation.
 * `PLATFORM` must correspond to one of the Gentoo's available platforms, like
 `x86`, `x86-hardened`, `amd64`, `amd64-nomultilib`, `amd64-hardened`, or
 `amd64-hardened-nomultilib` (see images on [dockerhub page](https://hub.docker.com/u/gentoo)).
+**WARNING**: currently we do not use platforms other from `amd64`, so setting
+it to different values may cause problems.
 * `STAGE3_TAG` should contain particular `stage3` timestamp tag
 (like `20200214`). To see list of available tags, visit corresponding
 `stage3` image page (e.g. [for amd64](https://hub.docker.com/r/gentoo/stage3-amd64/tags).
 * `BINFARM_TYPE` refers to one of dynamically-composed build configurations.
 Currently only `opt` and `dbg` are supported for optimized and debug versions
-of the binary farm environment. This presets has to be properly understood by
-`root.??.d/init-binfarm.sh` script(s) in order to customize some additional
-compile-time features and portages configs.
-* `BINFARM_PROFILE` should be one of the points available by
-`eselect profile list`. For detailed explaination of Gentoo profile, see
-relevant [Gentoo wiki page](https://wiki.gentoo.org/wiki/Profile_(Portage)).
+of the binary farm environment.
+* `GENTOO_PROFILE` should be customized profile provided by your overlay. One
+may found our [`q-crypt-hep` overlay](https://github.com/CrankOne/q-crypt-hep-overlay)
+being illustrative in that way. For detailed explaination of Gentoo profiles,
+see relevant [Gentoo wiki page](https://wiki.gentoo.org/wiki/Profile_(Portage)).
+Currently, profile name is deduced from `BINFARM_TYPE` value. One can utilize
+one of the system Gentoo profiles as well, of course.
+* `PKGS_LOCAL_DIR` shall be the base directory where binary packages for
+particularm "farms" to be located (default is `/var/hepfarm/pkgs`).
 
-The `BINFARM_TYPE` variable may be further superseded by custom portage
-profile.
+For the rest of variables, see comments within the Makefile itself. Note the
+variable `PORTAGE_BINHOST` -- this might be very useful to keep the
+progress of packages already being built during the process of development
+your own bundle (see *Workflow* section below).
 
-## Building the Base Image and Parameters
+## Usual Workflow
 
-Base "binary farm" image may be then built by:
+Conceptually the `make pkgs` should do all the work, but there can be
+(and most often *are*) troubles -- packages change, the Gentoo changes,
+it is matter of luck to rely on automated builds. So far one have to perform
+manual staging with:
 
-    $ make binfarm-image
+    $ make binfarm          # few minutes, initial bootstrapping image
+    $ make hepfarm          # few seconds, configure environment for building packages
+    $ make pkgs             # few hours, build packages
+    $ make publish-pkgs     # few minutes, upload built packages
+    $ make publish-image    # few minutes, upload image to the registry
 
-Once image is built, you can start to write your own customization for subject
-image(s) by checking instructions right at the shell-sunning container.
-Currently, the "hepfarm" image is located in repo at `root.01.d/` and
-`context.01.d` for demonstration purpose -- it produces binary packages for
-our work in HEP.
+One can, of course, supply their own environment variables appending `KEY=VALUE`
+pairs within the `make` command (see *Makefile Variables* section above). In
+particular, once (some) packages were build within the `pkgs` target one would
+be interested in `PORTAGE_BINHOST` variable that allows to avoid rebuilding of
+packages being successfully built.
 
-# Notes
+    $ make pkgs PORTAGE_BINHOST=/var/cache/binpkgs
 
-Gentoo is a perfect Linux distribution for building deterministic environments.
-The most prominent drawbacks one can realize about running it in Docker
-environment is portages tree that produces extreme amount of tiny files that
-makes Docker containers run very slow. We do overcome this issue by holding
-the official portages tree on squashfs. Other things have to be noticed,
-however.
+This way Portage will consume previously built binary packages from shared
+location.
 
 # TODO
 
-1. Incorporate custom Gentoo profiles instead of bunch of this silly _bricolage_
-at `root.00.d/etc/portage/make.conf`: [how](https://wiki.gentoo.org/wiki/Profile_(Portage)#Creating\_custom\_profiles),
-use [repo](https://github.com/CrankOne/q-crypt-hep-overlay)).
-2. Note of TODO comments at the `presets/make.conf.common`: `MAKEOPTS` and
-`PORTAGE_BINHOST` must be manageable externally-specified variables. Currently
-they are hardcoded and exposes my tiny VPS.
-3. Think on some patching/config update mechanics with Portage's configs
-(`._cfg0000.make.conf`? ebuild at custom repo? utilize smth like
-`root.00.d/opt/binfarm/bin/apply-patches.sh` as the last resort). The dumb
-`echo` in `root.00.d/opt/init-binfarm.sh` must be superseded.
-4. Break the "hepfarm" into pieces for incremental builds: need finer subject
+1. Break the "hepfarm" into pieces for incremental builds: need finer subject
 structure: MC, analysis, serving, etc.
+2. Clean-up targets: delete images, temporary files, etc.
+3. The management of ` $(TMP_DIR)/root.$*.d` within the target
+`context.%.d/root.d.tar` sometimes weirdly omits rebuild.
+4. Test the `pkg-srv.txt` target and local `PORTAGE_BINHOST` behaviour.
+5. More `_GUARD_` files to provide finer dependency tracking over virtual ones.
+6. Remove `/var/db/repos/gentoo` portages tree from images uploaded to
+the hub/registry to save some size (for users images it might be safely
+restored from a portages snapshot).
 

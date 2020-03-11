@@ -11,17 +11,7 @@
 *.xmi~
 *nohup.out
 *.lvimrc
-dev/*
-.bob-*
-.venv*
-.bob*
-tags
-.project
-.pydevproject
-.settings
-.dat
 # common generated
 context.*.d/root.d.tar
-image-*.txt
-*_GUARD_*
+.cache/*
 # particular generated
