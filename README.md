@@ -124,8 +124,8 @@ where:
 
 1. _Binfarm_ is a bootrstrap image for subsequent builds.
 2. Subject images are base layers for containers producing the binary packages.
-Define use flags for pre-built packages located on public repo. It is not
-supposed to be published on any registry.
+Defines basic configuration for pre-built packages located on public repo. It
+is not supposed to be published on any registry.
 3. Custom image may be then quickly assembled by user or uploaded to registry,
 just like in case of ordinary binary package-based distro... but with much more
 impressive customization possibilities!
