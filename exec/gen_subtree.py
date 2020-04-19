@@ -103,7 +103,7 @@ def main( config, root_dir='/tmp', list_sets=False ):
         prevEnvFileContent = None
         for pkgName, pkgSpec in spec[setName].items():
             pkg = AtomRef(pkgName, pkgSpec, setName)
-            for prop in ( 'keywords', 'license', 'mask', 'use', 'env' ):
+            for prop in ( 'accept_keywords', 'license', 'mask', 'use', 'env' ):
                 pt = os.path.join( root_dir, 'etc/portage/package.%s'%prop, pkg.cfgFileNamePat )
                 with SmartConfig(pt, 'w') as f:
                     pkg.write_props_to(prop, f)

@@ -20,8 +20,8 @@ hf-sci-soft:
             # required by sci-physics/geant-4.10.05_p01::gentoo[qt5]
             # required by sci-physics/geant-data-4.10.05::gentoo
             ">=dev-libs/libpcre2-10.33-r1": { use: [pcre16] }
-            "sci-physics/geant-data": { keywords: [~amd64] }
-            "app-doc/geant-docs": { keywords: [~amd64] }
+            "sci-physics/geant-data": { accept_keywords: [~amd64] }
+            "app-doc/geant-docs": { accept_keywords: [~amd64] }
     <sci-physics/root-9999:
         env: [debugsyms.conf, installsources.conf]
         deps:
@@ -31,7 +31,7 @@ hf-sci-soft:
             # required by sci-physics/root-6.12.06-r11::gentoo[qt5,X]
             # required by sci-physics/root (argument)
             ">=dev-qt/qtwebengine-5.13.2": { use: [widgets]}
-        keywords: [~amd64]
+        accept_keywords: [~amd64]
     sci-visualization/gnuplot:
         use: [gd, readline, X, cairo, compat, latex, libcaca, libcerf, lua, qt5, wxwidgets]
         deps:
@@ -60,7 +60,7 @@ hf-dev-tools:
 
 hf-aux-dev:
     dev-libs/capnproto:
-        keywords: [ ~amd64 ]
+        accept_keywords: [ ~amd64 ]
     dev-libs/boost:
         use: [context, lzma, numpy, python, tools, zstd]
     dev-libs/protobuf: {}
@@ -75,6 +75,8 @@ hf-aux-dev:
             # required by app-doc/doxygen-1.8.16-r1::gentoo[dot]
             # required by doxygen (argument)
             media-libs/gd: { use: [jpeg, truetype, fontconfig] }
+    dev-libs/log4cpp: {}
+    dev-cpp/gtest: {}
 
 hf-python:
     dev-python/virtualenv: {}
@@ -87,9 +89,9 @@ hf-python:
               geoip, kerberos, ldap, libev, -libressl, lua, memcached, mysql,
               -php, postgres, -rrdtool, sasl, webdav]
     dev-python/jupyter:
-        keywords: [~amd64]
+        accept_keywords: [~amd64]
         deps:
-            dev-python/jupyter_console: { keywords: [~amd64] }
+            dev-python/jupyter_console: { accept_keywords: [~amd64] }
             # required by dev-python/pyzmq-17.1.0::gentoo
             # required by dev-python/ipyparallel-6.0.2-r1::gentoo
             # required by dev-python/ipython-5.4.1-r2::gentoo[smp]

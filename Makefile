@@ -17,16 +17,16 @@
 
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/portage/tags
-PORTAGE_TAG=20200222
+PORTAGE_TAG=20200419
 # Possible choices are: x86, x86-hardened, amd64, amd64-nomultilib,
 # amd64-hardened, amd64-hardened-nomultilib. See:
 # 	https://hub.docker.com/u/gentoo
 PLATFORM=amd64
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/stage3-amd64/tags
-STAGE3_TAG=20200301
+STAGE3_TAG=20200419
 # Possible choices are: opt, dbg -- assumed to coincide with one of the custom
-# profile (see
+# profile
 BINFARM_TYPE=opt
 # Gentoo profile to be set
 GENTOO_PROFILE=q-crypt-hep:binfarm/$(BINFARM_TYPE)
