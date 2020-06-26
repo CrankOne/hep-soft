@@ -4,6 +4,7 @@ Accepts a .yaml document (specification) describing packages (atoms) to be
 installed, generates a set of package.[use|license|keyword] files to be
 consumed by Gentoo Portage system.
 """
+from __future__ import unicode_literals
 
 import os
 import sys

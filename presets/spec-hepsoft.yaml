@@ -55,8 +55,11 @@ hf-dev-tools:
     dev-util/valgrind: {}
     dev-util/cmake: {}
     sys-devel/gdb: {}
-    sys-devel/clang: {}
+    sys-devel/clang: { env: [no-tmpfs.conf] }
     dev-lang/swig:0: {}
+    net-libs/cppzmq: {}
+    sys-devel/llvm: { env: [no-tmpfs.conf] }
+    dev-qt/qtcore: { env: [no-tmpfs.conf] }
 
 hf-aux-dev:
     dev-libs/capnproto:
@@ -116,7 +119,7 @@ hf-db:
     dev-db/mysql++: {}
 
 hf-frontend:
-    net-libs/nodejs: {}
+    net-libs/nodejs: { env: [no-tmpfs.conf] }
 
 hf-misc:
     app-text/tree: {}

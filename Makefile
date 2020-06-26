@@ -38,7 +38,7 @@ GENTOO_PROFILE=q-crypt-hep:binfarm/$(BINFARM_TYPE)
 # in the system.
 DOCKER=sudo -u collector docker
 # Python executable
-PYTHON=python
+PYTHON=python3
 # Options for creating an archive of root filesystem additions.
 ARCHIVE_OPTS=--exclude=.keep --exclude=*.sw? --exclude=.git
 # Directory for temporary output of root filesystem subtrees
@@ -47,6 +47,11 @@ TMP_DIR=/tmp/hep-soft
 # Note: for SELinux do not forget to run
 # 	$ chcon -Rt svirt_sandbox_file_t /var/hepfarm/pkgs
 PKGS_LOCAL_DIR=/var/hepfarm/pkgs
+# This options will be provided to docker command during packages build stage,
+# in addition to required ones. User may provide some customization (e.g. mount
+# a dedicated volume for package build).
+PKGBUILD_DOCKER_OPTS=
+#PKGBUILD_DOCKER_OPTS="--mount='type=volume,dst=/var/tmp/portage-ondisk,volume-driver=local,volume-opt=type=ext4,volume-opt=device=/dev/vdb'"
 
 #
 # REMOTE PUBLISHING
@@ -108,13 +113,14 @@ hepfarm: .cache/image-hepsoft-$(SUFFIX).txt
 # 	$ --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
 publish-pkgs:
 	rsync -av --info=progress2 --chmod=F644,D2775 \
-		$(PKGS_LOCAL_CURRENT_DIR) $(REMOTE_HOST):$(REMOTE_DIR)
+		$(PKGS_LOCAL_CURRENT_DIR) crank@$(REMOTE_HOST):$(REMOTE_DIR)
 
 # Produces packages (long-running task!)
 # TODO: directory for emerge's logs (--quiet-build=y)
 pkgs: .cache/image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
 	$(DOCKER) run --rm \
 		-v $(PKGS_LOCAL_CURRENT_DIR):/var/cache/binpkgs:z \
+		$(PKGBUILD_DOCKER_OPTS) \
 		$(shell cat $<) \
 		/bin/bash -c 'sudo emerge --keep-going=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*"'
 
