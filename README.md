@@ -10,30 +10,34 @@ of Gentoo Portage system.
 Although our scientific group currently using the images produced by these
 scripts, some settings/scenarios here are hardcoded (see TODO at the end of
 this note). So far it should be considered as a boilerplate by side user rather
-then a generic-purpose distro.
+than a generic-purpose distro.
 
 ## Rationale
 
-The goal of this initiative is to gain customization freedom offered by Gentoo
-distirbution by the price of binary package-based distro. 
+The goal of this initiative is to gain customization freedom available within
+custom made Linux build (close to Linux from scratch) by the price of binary
+package-based distributive at the user side.
+
+## Content
 
 This repository provides:
 
-1. A recipes for building a building environment layer for pre-compiled
-packages production. This base image should be then considered as a factory or
+1. A recipes to build an environment layer for pre-compiled packages
+production. This base image should be then considered as a factory image, or
 "farm" (this is where "binfarm" came from). The _binfarm_ image effectively is
 just a customized Gentoo `stage3` image. Once the basic environment is clamped
 by particular _binfarm_ release, the _binary packages_ may be then built and
 published for the purpose of fast assembling a Docker image for particular
-purpose;
+purpose.
 2. A boilerplate recipe(s) for building a number of packages. Once built, these
 packages can be then exploited for assembling a subject-specific docker images.
 
-This way we tend to follow the Docker idea of making layered images. Like with
-classic binary package-based distro like RHEL, Debian, etc. the new image
-can be constructed from base image and bundle of binary packages in reasonable
-time. However, making the base layer (_binfarm_) we still leave as much of
-customization opportunities as original Gentoo distirbution can offer.
+This way we tend to follow the Docker idea of making layered images. Pretty
+close like with classic binary package-based distro like RHEL, Debian, etc.,
+the new image can be assembled from base image and a bundle of binary packages
+in reasonable amount of time. However, making the base layer (_binfarm_) we
+still leave as much of customization opportunities as original Gentoo Linux
+distirbution can offer.
 
 One may think of the `binfarm` as if it is a classic binary-package-based
 repo (RHEL, Debian) of certain version, but driven by `emerge` instead of
