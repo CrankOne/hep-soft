@@ -1,6 +1,6 @@
 # This file lists packages to be installed in tier #1
 hf-sci-soft:
-    sci-physics/geant:
+    sci-physics/geant-4.10.6_p2:
         env: [debugsyms.conf, installsources.conf]
         use: [data, zlib, dawn, doc, examples, gdml, opengl, qt5, vrml]
         deps:
@@ -22,6 +22,7 @@ hf-sci-soft:
             ">=dev-libs/libpcre2-10.33-r1": { use: [pcre16] }
             "sci-physics/geant-data": { accept_keywords: [~amd64] }
             "app-doc/geant-docs": { accept_keywords: [~amd64] }
+            ">=sci-physics/clhep-2.4.1.3" : { accept_keywords: [~amd64] }
     <sci-physics/root-9999:
         env: [debugsyms.conf, installsources.conf]
         deps:
@@ -45,6 +46,15 @@ hf-sci-soft:
             # required by sci-visualization/gnuplot-5.2.7::gentoo[wxwidgets]
             # required by sci-visualization/gnuplot (argument)
             ">=x11-libs/cairo-1.16.0-r3": { use: [X] }
+            # required by media-libs/mesa-19.3.5::gentoo[libglvnd]
+            # required by media-libs/libepoxy-1.5.4::gentoo[egl]
+            # required by x11-libs/gtk+-3.24.16::gentoo
+            # required by x11-themes/adwaita-icon-theme-3.32.0::gentoo
+            # required by x11-libs/gtk+-2.24.32-r1::gentoo
+            # required by x11-libs/wxGTK-3.0.4-r2::gentoo[X]
+            # required by sci-visualization/gnuplot-5.2.7::gentoo[wxwidgets]
+            # required by @hf-sci-soft (argument)
+            ">=media-libs/libglvnd-1.3.1": { use: [X] }
     sci-libs/armadillo:
         env: [debugsyms.conf, installsources.conf]
         use: [lapack, arpack, blas, hdf5, superlu, tbb]
@@ -75,6 +85,14 @@ hf-aux-dev:
             # required by app-doc/doxygen-1.8.16-r1::gentoo[dot]
             # required by doxygen (argument)
             media-libs/gd: { use: [jpeg, truetype, fontconfig] }
+            # required by app-text/texlive-core-2020-r5::gentoo
+            # required by dev-texlive/texlive-basic-2020-r1::gentoo
+            # required by dev-texlive/texlive-latex-2020::gentoo
+            # required by dev-texlive/texlive-latexrecommended-2020::gentoo
+            # required by dev-tex/pgf-3.1.4b-r2::gentoo
+            # required by sci-visualization/gnuplot-5.2.7::gentoo[lua,latex]
+            # required by @hf-sci-soft (argument)
+            '>=media-libs/harfbuzz-2.6.5': { use: [icu] }
     dev-libs/log4cpp: {}
     dev-cpp/gtest: {}
 
@@ -107,7 +125,7 @@ hf-python:
         use: [ latex ]
         deps:
             media-libs/gd: { use: [png jpeg] }
-
+    # TODO: +pandas (would require >=dev-python/numpy-1.16.5 lapack)
 
 hf-db:
     dev-db/postgresql:
