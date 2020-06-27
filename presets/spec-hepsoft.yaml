@@ -127,4 +127,4 @@ hf-misc:
 
 hf-base:
     app-editors/vim:
-        use: [-minimal acl cscope python vim-pager]
+        use: [-minimal, acl, cscope, vim-pager, python]

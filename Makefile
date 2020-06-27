@@ -118,7 +118,7 @@ publish-pkgs:
 # Produces packages (long-running task!)
 # TODO: directory for emerge's logs (--quiet-build=y)
 pkgs: .cache/image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
-	$(DOCKER) run --rm \
+	$(DOCKER) run -t --rm \
 		-v $(PKGS_LOCAL_CURRENT_DIR):/var/cache/binpkgs:z \
 		$(PKGBUILD_DOCKER_OPTS) \
 		$(shell cat $<) \
