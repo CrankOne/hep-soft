@@ -1,8 +1,9 @@
 # This file lists packages to be installed in tier #1
 hf-sci-soft:
-    sci-physics/geant-4.10.6_p2:
+    '=sci-physics/geant-4.10.6_p2':
         env: [debugsyms.conf, installsources.conf]
         use: [data, zlib, dawn, doc, examples, gdml, opengl, qt5, vrml]
+        accept_keywords: [~amd64]
         deps:
             # required by dev-qt/qtgui-5.13.2::gentoo[xcb]
             # required by dev-qt/qtprintsupport-5.13.2::gentoo
@@ -65,8 +66,11 @@ hf-dev-tools:
     dev-util/valgrind: {}
     dev-util/cmake: {}
     sys-devel/gdb: {}
-    sys-devel/clang: {}
+    sys-devel/clang: { env: [no-tmpfs.conf] }
     dev-lang/swig:0: {}
+    net-libs/cppzmq: {}
+    sys-devel/llvm: { env: [no-tmpfs.conf] }
+    dev-qt/qtcore: { env: [no-tmpfs.conf] }
 
 hf-aux-dev:
     dev-libs/capnproto:
@@ -125,7 +129,14 @@ hf-python:
         use: [ latex ]
         deps:
             media-libs/gd: { use: [png jpeg] }
-    # TODO: +pandas (would require >=dev-python/numpy-1.16.5 lapack)
+    dev-python/pandas:
+        use: [ X ]
+        deps:
+            # required by sci-libs/scipy-1.4.1::gentoo
+            # required by dev-python/bottleneck-1.2.1-r1::gentoo
+            # required by dev-python/pandas-0.24.2::gentoo[-minimal]
+            # required by pandas (argument)
+            ">=dev-python/numpy-1.17.4-r3": { use: [lapack] }
 
 hf-db:
     dev-db/postgresql:
@@ -136,7 +147,7 @@ hf-db:
     dev-db/mysql++: {}
 
 hf-frontend:
-    net-libs/nodejs: {}
+    net-libs/nodejs: { env: [no-tmpfs.conf] }
 
 hf-misc:
     app-text/tree: {}
@@ -144,4 +155,4 @@ hf-misc:
 
 hf-base:
     app-editors/vim:
-        use: [-minimal acl cscope python vim-pager]
+        use: [-minimal, acl, cscope, vim-pager, python]

@@ -17,17 +17,17 @@
 
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/portage/tags
-PORTAGE_TAG=20200419
+PORTAGE_TAG=20200623
 # Possible choices are: x86, x86-hardened, amd64, amd64-nomultilib,
 # amd64-hardened, amd64-hardened-nomultilib. See:
 # 	https://hub.docker.com/u/gentoo
 PLATFORM=amd64
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/stage3-amd64/tags
-STAGE3_TAG=20200419
+STAGE3_TAG=20200618
 # Possible choices are: opt, dbg -- assumed to coincide with one of the custom
 # profile
-BINFARM_TYPE=opt
+BINFARM_TYPE=dbg
 # Gentoo profile to be set
 GENTOO_PROFILE=q-crypt-hep:binfarm/$(BINFARM_TYPE)
 
@@ -38,7 +38,9 @@ GENTOO_PROFILE=q-crypt-hep:binfarm/$(BINFARM_TYPE)
 # in the system.
 DOCKER=sudo -u collector docker
 # Python executable
-PYTHON=python
+PYTHON=python3
+# rsync command to publish files
+RSYNC=rsync
 # Options for creating an archive of root filesystem additions.
 ARCHIVE_OPTS=--exclude=.keep --exclude=*.sw? --exclude=.git
 # Directory for temporary output of root filesystem subtrees
@@ -47,6 +49,11 @@ TMP_DIR=/tmp/hep-soft
 # Note: for SELinux do not forget to run
 # 	$ chcon -Rt svirt_sandbox_file_t /var/hepfarm/pkgs
 PKGS_LOCAL_DIR=/var/hepfarm/pkgs
+# This options will be provided to docker command during packages build stage,
+# in addition to required ones. User may provide some customization (e.g. mount
+# a dedicated volume for package build).
+PKGBUILD_DOCKER_OPTS=
+#PKGBUILD_DOCKER_OPTS="--mount='type=volume,dst=/var/tmp/portage-ondisk,volume-driver=local,volume-opt=type=ext4,volume-opt=device=/dev/vdb'"
 
 #
 # REMOTE PUBLISHING
@@ -107,16 +114,17 @@ hepfarm: .cache/image-hepsoft-$(SUFFIX).txt
 # i.g.:
 # 	$ --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
 publish-pkgs:
-	rsync -av --info=progress2 --chmod=F644,D2775 \
-		$(PKGS_LOCAL_CURRENT_DIR) $(REMOTE_HOST):$(REMOTE_DIR)
+	$(RSYNC) -av --partial --info=progress2 --chmod=F644,D2775 \
+		$(PKGS_LOCAL_CURRENT_DIR) crank@$(REMOTE_HOST):$(REMOTE_DIR)
 
 # Produces packages (long-running task!)
 # TODO: directory for emerge's logs (--quiet-build=y)
 pkgs: .cache/image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
-	$(DOCKER) run --rm \
+	$(DOCKER) run -t --rm \
 		-v $(PKGS_LOCAL_CURRENT_DIR):/var/cache/binpkgs:z \
+		$(PKGBUILD_DOCKER_OPTS) \
 		$(shell cat $<) \
-		/bin/bash -c 'sudo emerge --keep-going=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*"'
+		/bin/bash -c 'sudo emerge --keep-going=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*" ; sudo chmod a+r /var/cache/binpkgs -R ; sudo find /var/cache/binpkgs -type d -exec chmod a+x {} \;'
 
 $(call GUARD,HEPSOFT_VERSION): | .cache
 	rm -rf ./.cache/HEPSOFT_VERSION*
@@ -198,5 +206,6 @@ srv-start: .cache/pkg-srv.txt
 # Use this to stop background file server container
 srv-stop:
 	$(DOCKER) stop $(shell cat .cache/pkg-srv.txt)
+
 
 .PHONY: all clean binfarm hepfarm pkgs publish-pkgs publish-image srv-start srv-stop

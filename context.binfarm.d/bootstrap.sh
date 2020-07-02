@@ -21,7 +21,7 @@ echo
 
 # This temporarily disables CAPS support for pam to get rid of circular
 # dependency of sys-libs/pam vs. sys-libs/libcap
-echo 'sys-libs/pam -filecaps' > /etc/portage/package.use/pam-workaround
+#echo 'sys-libs/pam -filecaps' > /etc/portage/package.use/pam-workaround
 # Rebuild everything
 #revdep-rebuild
 emerge ${EMERGE_DEFAULT_OPTS} @world
