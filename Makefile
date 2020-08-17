@@ -17,14 +17,14 @@
 
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/portage/tags
-PORTAGE_TAG=20200623
+PORTAGE_TAG=20200815
 # Possible choices are: x86, x86-hardened, amd64, amd64-nomultilib,
 # amd64-hardened, amd64-hardened-nomultilib. See:
 # 	https://hub.docker.com/u/gentoo
 PLATFORM=amd64
 # For variants see e.g.:
 #   https://hub.docker.com/r/gentoo/stage3-amd64/tags
-STAGE3_TAG=20200618
+STAGE3_TAG=20200815
 # Possible choices are: opt, dbg -- assumed to coincide with one of the custom
 # profile
 BINFARM_TYPE=dbg
@@ -114,7 +114,7 @@ hepfarm: .cache/image-hepsoft-$(SUFFIX).txt
 # i.g.:
 # 	$ --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
 publish-pkgs:
-	$(RSYNC) -av --partial --info=progress2 --chmod=F644,D2775 \
+	$(RSYNC) -uav --partial --info=progress2 --chmod=F644,D2775 \
 		$(PKGS_LOCAL_CURRENT_DIR) crank@$(REMOTE_HOST):$(REMOTE_DIR)
 
 # Produces packages (long-running task!)
@@ -122,9 +122,10 @@ publish-pkgs:
 pkgs: .cache/image-hepsoft-$(SUFFIX).txt | $(PKGS_LOCAL_CURRENT_DIR)
 	$(DOCKER) run -t --rm \
 		-v $(PKGS_LOCAL_CURRENT_DIR):/var/cache/binpkgs:z \
+		-v $(shell readlink -f exec/hepfarm-build.sh):/var/src/hepfarm-build.sh \
 		$(PKGBUILD_DOCKER_OPTS) \
 		$(shell cat $<) \
-		/bin/bash -c 'sudo emerge --keep-going=y $(ALL_SETS) ; sudo quickpkg --include-config=y "*/*" ; sudo chmod a+r /var/cache/binpkgs -R ; sudo find /var/cache/binpkgs -type d -exec chmod a+x {} \;'
+		/bin/bash /var/src/hepfarm-build.sh $(ALL_SETS)
 
 $(call GUARD,HEPSOFT_VERSION): | .cache
 	rm -rf ./.cache/HEPSOFT_VERSION*
@@ -171,6 +172,7 @@ context.%.d/root.d.tar: $$(shell find root.%.d -type f -print) \
                       | $(TMP_DIR)
 	rm -rf $(TMP_DIR)/root.$*.d
 	cp -r root.$*.d $(TMP_DIR)
+	echo "XXX !!! "
 	$(PYTHON) exec/gen_subtree.py -c presets/spec-$*.yaml -d $(TMP_DIR)/root.$*.d
 	sh exec/hepsoft.sh -m -j$(BUILD_NPROC) \
 		$(if $(PORTAGE_BINHOST),-b$(PORTAGE_BINHOST),) > $(TMP_DIR)/root.$*.d/etc/portage/make.conf

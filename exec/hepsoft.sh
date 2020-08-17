@@ -7,7 +7,7 @@
 usage() {
     cat <<EOF
 Usage forms:
-    $ hepsoft [-m] [-v] [-b binhost] [-j nJobs]
+    $ hepsoft [-m] [-v] [-b binhost] [-j nJobs] [-t binfarmType]
 Being ran with \`-v' option, prints the current hepsoft release version.
 With \`-m' option, (re-)generates the Portage's \`make.conf' file with
 \`PORTAGE_BINHOST' variable optionally provided with \`-b' argument.
@@ -19,7 +19,6 @@ generate_makeconf() {
     if [ ! -z ${PORTAGE_BINHOST} ] ; then
         echo "PORTAGE_BINHOST=\"${PORTAGE_BINHOST}\""
         EMERGE_DEFAULT_OPTS="$EMERGE_DEFAULT_OPTS --getbinpkg=y"
-        # TODO: append default emerge options
     fi
     if [ ! -z "${NJOBS// }" ] ; then
         MAKEOPTS="$MAKEOPTS -j${NJOBS}"
@@ -49,6 +48,6 @@ esac
 done
 
 if [[ "yes" == ${DO_GENERATE_MAKECONF} ]] ; then
-    generate_makeconf
+    generate_makeconf $BINFARM_TYPE
 fi
 

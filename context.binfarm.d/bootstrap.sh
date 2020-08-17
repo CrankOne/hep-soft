@@ -24,6 +24,10 @@ echo
 #echo 'sys-libs/pam -filecaps' > /etc/portage/package.use/pam-workaround
 # Rebuild everything
 #revdep-rebuild
+echo "Updating following @world:"
+cat /var/lib/portage/world
+echo
+
 emerge ${EMERGE_DEFAULT_OPTS} @world
 rm /etc/portage/package.use/pam-workaround
 emerge ${EMERGE_DEFAULT_OPTS} @world
